@@ -1,13 +1,19 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Controls;
+using HandheldCompanion.Devices;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
 using iNKORE.UI.WPF.Modern.Controls;
+using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,11 +21,13 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using Windows.System.Power;
 using WpfScreenHelper;
 using WpfScreenHelper.Enum;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Page = System.Windows.Controls.Page;
@@ -77,12 +85,17 @@ public partial class OverlayQuickTools : GamepadWindow
     public QuickProfilesPage profilesPage;
     public QuickOverlayPage overlayPage;
     public QuickSuspenderPage suspenderPage;
+    public QuickLibraryPage libraryPage;
+    public WindowSinker sinker;
+
 
     private static OverlayQuickTools CurrentWindow;
     private string preNavItemTag;
 
     public OverlayQuickTools()
     {
+        sinker = new WindowSinker(this);
+
         InitializeComponent();
         CurrentWindow = this;
 
@@ -102,7 +115,15 @@ public partial class OverlayQuickTools : GamepadWindow
         SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
 
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
+        //SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
+        PlatformManager.LibreHardwareMonitor.CPULoadChanged += PlatformManager_CPULoadChanged;
+        PlatformManager.LibreHardwareMonitor.CPUTemperatureChanged += PlatformManager_CPUTemperatureChanged;
+        PlatformManager.LibreHardwareMonitor.CPUPowerChanged += PlatformManager_CPUPowerChanged;
+        PlatformManager.LibreHardwareMonitor.MemoryUsageChanged += PlatformManager_MemoryUsageChanged;
+        ProfileManager.Applied += ProfileManager_Applied;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+
 
         // create pages
         homePage = new("quickhome");
@@ -111,6 +132,7 @@ public partial class OverlayQuickTools : GamepadWindow
         profilesPage = new("quickprofiles");
         overlayPage = new("quickoverlay");
         suspenderPage = new("quicksuspender");
+        libraryPage = new("library");
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
@@ -118,6 +140,118 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickProfilesPage", profilesPage);
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
+        _pages.Add("QuickLibraryPage", libraryPage);
+
+        var ImageSource =
+            new Uri($"pack://application:,,,/Resources/{MainWindow.CurrentDevice.ProductIllustration}.png");
+
+        // UI thread (async)
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            // Motherboard properties
+            ImageDevice.Source = new BitmapImage(ImageSource);
+        });
+    }
+
+    private void PlatformManager_CPULoadChanged(float? value)
+    {
+        if (value == null)
+            return;
+
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            var CPULoadPercent = (int)Math.Truncate((float)(value));
+            CPULoad.Text = $"{CPULoadPercent}%";
+            //CPULoadIndicator.Visibility = Visibility.Visible;
+        });
+    }
+    private void PlatformManager_CPUTemperatureChanged(float? value)
+    {
+        if (value == null)
+            return;
+
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            var CPUTemperaturePercent = (int)Math.Truncate((float)(value));
+            CPUTemperature.Text = $"{CPUTemperaturePercent} C";
+            //CPULoadIndicator.Visibility = Visibility.Visible;
+        });
+    }
+    private void PlatformManager_CPUPowerChanged(float? value)
+    {
+        if (value == null)
+            return;
+
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            var CPUPowerPercent = (int)Math.Truncate((float)(value));
+            CPUPower.Text = $"{CPUPowerPercent} TDP";
+            //CPULoadIndicator.Visibility = Visibility.Visible;
+        });
+    }
+    private void PlatformManager_MemoryUsageChanged(float? value)
+    {
+        if (value == null)
+            return;
+
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            var MemoryUsagePercent = (int)Math.Truncate((float)(value));
+            MemoryUsage.Text = $"{MemoryUsagePercent} MB";
+            //CPULoadIndicator.Visibility = Visibility.Visible;
+        });
+    }
+    private void QuickButton_Click(object sender, RoutedEventArgs e)
+    {
+        System.Windows.Controls.Button button = (System.Windows.Controls.Button)sender;
+        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+    }
+
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            t_CurrentProfile.Text = profile.ToString();
+        });
+    }
+
+    private void SettingsManager_SettingValueChanged(string name, object value)
+    {
+        string[] onScreenDisplayLevels = {
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
+        };
+
+        switch (name)
+        {
+            case "OnScreenDisplayLevel":
+                {
+                    var overlayLevel = Convert.ToInt16(value);
+
+                    // UI thread (async)
+                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    {
+                        t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+                    });
+                }
+                break;
+            case "QuickToolsLocation":
+                {
+                    var QuickToolsLocation = Convert.ToInt32(value);
+                    UpdateLocation(QuickToolsLocation);
+                }
+                break;
+            case "QuickToolsAutoHide":
+                {
+                    AutoHide = Convert.ToBoolean(value);
+                }
+                break;
+        }
     }
 
     public static OverlayQuickTools GetCurrent()
@@ -125,27 +259,6 @@ public partial class OverlayQuickTools : GamepadWindow
         return CurrentWindow;
     }
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            switch (name)
-            {
-                case "QuickToolsLocation":
-                    {
-                        var QuickToolsLocation = Convert.ToInt32(value);
-                        UpdateLocation(QuickToolsLocation);
-                    }
-                    break;
-                case "QuickToolsAutoHide":
-                    {
-                        AutoHide = Convert.ToBoolean(value);
-                    }
-                    break;
-            }
-        });
-    }
 
     private void SystemManager_DisplaySettingsChanged(ScreenResolution resolution)
     {
@@ -370,11 +483,16 @@ public partial class OverlayQuickTools : GamepadWindow
             {
                 case Visibility.Collapsed:
                 case Visibility.Hidden:
+                    //sinker.Sink();
                     Show();
                     Focus();
-
+                    this.Topmost = true;
                     if (hwndSource != null)
+                    {
+                        WinAPI.SetWindowPos(hwndSource.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
                         WPFUtils.SendMessage(hwndSource.Handle, WM_NCACTIVATE, WM_NCACTIVATE, 0);
+                    }
+                        
 
                     InvokeGotGamepadWindowFocus();
 
@@ -382,7 +500,7 @@ public partial class OverlayQuickTools : GamepadWindow
                     break;
                 case Visibility.Visible:
                     Hide();
-
+                    //sinker.Unsink();
                     InvokeLostGamepadWindowFocus();
 
                     clockUpdateTimer.Stop();
@@ -489,7 +607,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
+        //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
     private void UpdateTime(object? sender, EventArgs e)

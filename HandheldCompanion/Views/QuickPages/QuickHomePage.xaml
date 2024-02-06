@@ -17,16 +17,27 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
             <RowDefinition />
             <RowDefinition />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition MinWidth="50"/>
+            <ColumnDefinition Width="8*" MinWidth="200" />
+        </Grid.ColumnDefinitions>
 
+       
+        
+        
         <ui:SimpleStackPanel
-            Margin="0,6,0,6"
+            Margin="0,0,0,6"
             VerticalAlignment="Top"
-            Spacing="6">
-            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{x:Static resx:Resources.QuickSettingsPage_Title}" />
+            Spacing="6"
+            Grid.Row="1"
+            Grid.Column="1">
 
+            <TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="{x:Static resx:Resources.QuickSettingsPage_Title}" />
+            
             <!--  Shortcuts  -->
             <UniformGrid
                 Name="QuickHotkeys"
@@ -40,262 +51,171 @@
             </UniformGrid>
         </ui:SimpleStackPanel>
 
+        <Grid Grid.Column="0" Grid.Row="1" Margin="0,20,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <ui:FontIcon
+                        Height="40"
+                        Grid.Row="0"
+                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                        Glyph="&#xE706;"/>
+            </Grid>
+            <Grid Grid.Row="1">
+                <Slider
+                        Grid.Row="1" 
+                        Orientation="Vertical"
+                        TickPlacement="BottomRight"
+                        Grid.ColumnSpan="1"
+                        HorizontalAlignment="Center"
+                        x:Name="SliderBrightness"
+                        AutoToolTipPrecision="0"
+                        IsEnabled="False"
+                        IsMoveToPointEnabled="True"
+                        IsSnapToTickEnabled="True"
+                        LargeChange="10"
+                        Maximum="100"
+                        Minimum="0"
+                        SmallChange="1"
+                        TickFrequency="10"
+                        ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
+                        ValueChanged="SliderBrightness_ValueChanged"/>
+            </Grid>
+
+
+        </Grid>
+
+        <Grid Grid.Column="0" Grid.Row="2" Margin="0,20,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <ui:FontIcon
+                    Grid.Row="0"
+                    x:Name="VolumeIcon"
+                    Height="40"
+                    VerticalAlignment="Center"
+                    FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                    Glyph="&#xE767;" />
+            </Grid>
+            <Grid Grid.Row="1">
+                <Slider
+                     Grid.Row="1"         
+                     Orientation="Vertical"
+                     TickPlacement="BottomRight"
+                     Grid.ColumnSpan="1"
+                     HorizontalAlignment="Center"
+                     x:Name="SliderVolume"
+                     VerticalAlignment="Stretch"
+                     AutoToolTipPrecision="0"
+                     IsMoveToPointEnabled="True"
+                     IsSnapToTickEnabled="True"
+                     LargeChange="10"
+                     Maximum="100"
+                     Minimum="0"
+                     SmallChange="1"
+                     TickFrequency="10"
+                     ToolTip="{Binding Value, Mode=OneWay, RelativeSource={RelativeSource Mode=Self}, StringFormat=N0}"
+                     ValueChanged="SliderVolume_ValueChanged" />
+            </Grid>
+        </Grid>
+
+
         <ui:SimpleStackPanel
-            Grid.Row="1"
+            Grid.Row="2"
+            Grid.Column="1"
             VerticalAlignment="Bottom"
             Spacing="6">
 
             <Button
-                Name="QuickDevicePage"
-                Height="66"
+                Height="200"
                 Padding="15,12,12,12"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
-                Click="QuickButton_Click">
-
-                <Grid>
-                    <DockPanel HorizontalAlignment="Left">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE70A;" />
-
-                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickDevicePage_Title}" />
-                            <TextBlock
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickDevicePage_Desc}"
-                                TextWrapping="Wrap" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-
-                    <ui:FontIcon
-                        Margin="0,0,7,0"
-                        HorizontalAlignment="Right"
-                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                        FontSize="12"
-                        Glyph="&#xE974;" />
-                </Grid>
-            </Button>
-
-            <Button
-                Name="QuickProfilesPage"
-                Height="66"
-                Padding="15,12,12,12"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch"
-                Click="QuickButton_Click">
-
-                <Grid>
-                    <DockPanel HorizontalAlignment="Left">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE77B;" />
-
-                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickProfilesPage_Title}" />
-                            <TextBlock
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickProfilesPage_Desc}"
-                                TextWrapping="Wrap" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-
-                    <TextBlock
-                        Name="t_CurrentProfile"
-                        Grid.Column="1"
-                        Margin="0,0,32,0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                        Style="{StaticResource BodyTextBlockStyle}" />
-
-                    <ui:FontIcon
-                        Margin="0,0,7,0"
-                        HorizontalAlignment="Right"
-                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                        FontSize="12"
-                        Glyph="&#xE974;" />
-                </Grid>
-            </Button>
-
-            <Button
-                Name="QuickOverlayPage"
-                Height="66"
-                Padding="15,12,12,12"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch"
-                Click="QuickButton_Click">
-
-                <Grid>
-                    <DockPanel HorizontalAlignment="Left">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE78B;" />
-
-                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickOverlayPage_Title}" />
-                            <TextBlock
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickOverlayPage_Desc}"
-                                TextWrapping="Wrap" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-
-                    <TextBlock
-                        Name="t_CurrentOverlayLevel"
-                        Grid.Column="1"
-                        Margin="0,0,32,0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                        Style="{StaticResource BodyTextBlockStyle}" />
-
-                    <ui:FontIcon
-                        Margin="0,0,7,0"
-                        HorizontalAlignment="Right"
-                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                        FontSize="12"
-                        Glyph="&#xE974;" />
-                </Grid>
-            </Button>
-
-            <Button
-                Name="QuickSuspenderPage"
-                Height="66"
-                Padding="15,12,12,12"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch"
-                Click="QuickButton_Click">
-
-                <Grid>
-                    <DockPanel HorizontalAlignment="Left">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xEC0A;" />
-
-                        <ui:SimpleStackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="{x:Static resx:Resources.QuickSuspenderPage_Title}" />
-                            <TextBlock
-                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                Style="{StaticResource CaptionTextBlockStyle}"
-                                Text="{x:Static resx:Resources.QuickSuspenderPage_Desc}"
-                                TextWrapping="Wrap" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-
-                    <ui:FontIcon
-                        Margin="0,0,7,0"
-                        HorizontalAlignment="Right"
-                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                        FontSize="12"
-                        Glyph="&#xE974;" />
-                </Grid>
-            </Button>
-
-            <Border
-                Padding="15,12,12,12"
-                Background="{DynamicResource ExpanderHeaderBackground}"
-                CornerRadius="{DynamicResource ControlCornerRadius}">
-
-                <Grid>
+                >
+                <Grid Margin="0,0,50,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" MinWidth="200" />
-                        <ColumnDefinition Width="8*" MinWidth="200" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                    <ui:SimpleStackPanel VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Brightness" />
+                    <Image
+                        Name="ProcessIcon"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Width="50"
+                        Height="50" />
+                    <StackPanel Grid.Column="1" Grid.Row="0" Margin="12,0,0,10">
+                        <TextBlock x:Name="ExecutableTextBlock" Style="{StaticResource BodyTextBlockStyle}" Text="Waiting for Process" />
+                        <TextBlock
+                            x:Name="TitleTextBlock"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            TextWrapping="NoWrap" Text="..." />
+                    </StackPanel>
+                    <ui:SimpleStackPanel Margin="0,-4,0,-4" Spacing="6" Grid.Row="1" Grid.Column="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid Height="40" Grid.Row="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:FontIcon
+                                        Grid.Column="0"
+                                        Height="40"
+                                        HorizontalAlignment="Left"
+                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                        Glyph="&#xe7fc;" />
+                                    <Button                          
+                                        Grid.Column="1"
+                                        Name="B_KillProcess"
+                                        HorizontalAlignment="Stretch"
+                                        Click="B_KillProcess_Clicked"
+                                        Content="Configure Controller"
+                                        Style="{DynamicResource AccentButtonStyle}" />
+                                </Grid>
+                            </Grid>
+                            <Grid Height="40" Grid.Row="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:FontIcon
+                                        Grid.Column="0"
+                                        Height="40"
+                                        HorizontalAlignment="Left"
+                                        FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                        Glyph="&#xe711;" />
+                                    <Button
+                                        Grid.Column="1"
+                                        Name="B_ConfigController"
+                                        HorizontalAlignment="Stretch"
+                                        Click="B_KillProcess_Clicked"
+                                        Content="Close Window"
+                                        Style="{DynamicResource AccentButtonStyle}" />
+                                </Grid>
+
+                            </Grid>
+                        </Grid>
                     </ui:SimpleStackPanel>
-
-                    <DockPanel Grid.Column="1">
-                        <ui:FontIcon
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE706;" />
-
-                        <ui:SimpleStackPanel
-                            Margin="12,0,0,0"
-                            VerticalAlignment="Center"
-                            ScrollViewer.PanningMode="HorizontalOnly">
-                            <Slider
-                                x:Name="SliderBrightness"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsEnabled="False"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="10"
-                                Maximum="100"
-                                Minimum="0"
-                                SmallChange="1"
-                                Style="{DynamicResource SliderStyle1}"
-                                TickFrequency="1"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                ValueChanged="SliderBrightness_ValueChanged" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
                 </Grid>
-            </Border>
 
-            <Border
-                Padding="15,12,12,12"
-                Background="{DynamicResource ExpanderHeaderBackground}"
-                CornerRadius="{DynamicResource ControlCornerRadius}">
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" MinWidth="200" />
-                        <ColumnDefinition Width="8*" MinWidth="200" />
-                    </Grid.ColumnDefinitions>
-
-                    <ui:SimpleStackPanel VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Volume" />
-                    </ui:SimpleStackPanel>
-
-                    <DockPanel Grid.Column="1">
-                        <ui:FontIcon
-                            Name="VolumeIcon"
-                            Height="40"
-                            HorizontalAlignment="Center"
-                            FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                            Glyph="&#xE767;" />
-
-                        <ui:SimpleStackPanel
-                            Margin="12,0,0,0"
-                            VerticalAlignment="Center"
-                            ScrollViewer.PanningMode="HorizontalOnly">
-                            <Slider
-                                x:Name="SliderVolume"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                AutoToolTipPrecision="0"
-                                IsMoveToPointEnabled="True"
-                                IsSnapToTickEnabled="True"
-                                LargeChange="10"
-                                Maximum="100"
-                                Minimum="0"
-                                SmallChange="1"
-                                Style="{DynamicResource SliderStyle1}"
-                                TickFrequency="1"
-                                ToolTip="{Binding Value, StringFormat=N0, RelativeSource={RelativeSource Self}, Mode=OneWay}"
-                                ValueChanged="SliderVolume_ValueChanged" />
-                        </ui:SimpleStackPanel>
-                    </DockPanel>
-                </Grid>
-            </Border>
+            </Button>
         </ui:SimpleStackPanel>
     </Grid>
 </Page>

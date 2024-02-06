@@ -1,6 +1,9 @@
-﻿using HandheldCompanion.Managers;
+﻿using GameLib;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -20,9 +23,19 @@ public partial class App : Application
     ///     Initializes the singleton application object.  This is the first line of authored code
     ///     executed, and as such is the logical equivalent of main() or WinMain().
     /// </summary>
+    private readonly IServiceProvider _serviceProvider;
     public App()
     {
         InitializeComponent();
+        // get current assembly
+        var CurrentAssembly = Assembly.GetExecutingAssembly();
+        var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
+        IServiceCollection services = new ServiceCollection();
+        //services.AddTransient<GameViewModel>();
+        //services.AddSingleton<LauncherManager>();
+        services.AddSingleton(s => new MainWindow(fileVersionInfo, CurrentAssembly));
+        //services.AddSingleton(s => new LauncherManager());
+        _serviceProvider = services.BuildServiceProvider();
     }
 
     /// <summary>
@@ -97,7 +110,7 @@ public partial class App : Application
         // Handler for exceptions in threads behind forms.
         System.Windows.Forms.Application.ThreadException += Application_ThreadException;
 
-        MainWindow = new MainWindow(fileVersionInfo, CurrentAssembly);
+        MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         MainWindow.Show();
     }
 

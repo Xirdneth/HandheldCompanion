@@ -1,0 +1,169 @@
+﻿<UserControl
+    x:Class="HandheldCompanion.Controls.GameView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:HandheldCompanion.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:gif="http://wpfanimatedgif.codeplex.com"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
+    xmlns:local="clr-namespace:HandheldCompanion.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:GameViewModel}"
+    d:DesignHeight="1200"
+    d:DesignWidth="640"
+    Background="{StaticResource PrimaryBackgroundColor}"
+    FontSize="16"
+    Foreground="{StaticResource PrimaryForegroundColor}"
+    mc:Ignorable="d">
+
+
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <converters:ImageToImageSourceConverter x:Key="ImageToImageSourceConverter" />
+        <converters:IconToImageSourceConverter x:Key="IconToImageSourceConverter" />
+
+        <Style TargetType="TextBox">
+            <Setter Property="Width" Value="500" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="IsReadOnlyCaretVisible" Value="True" />
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="Width" Value="500" />
+            <Setter Property="Height" Value="100" />
+
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#373737" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!--#region Loading gif-->
+        <Border
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Panel.ZIndex="1"
+            d:Panel.ZIndex="-1"
+            Background="{StaticResource PrimaryBackgroundColor}"
+            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Text="Loading..." />
+
+                <Image
+                    Width="128"
+                    Height="128"
+                    Margin="10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    gif:ImageBehavior.AnimatedSource="/Resources/GameLib/spinner-white.gif" />
+            </StackPanel>
+        </Border>
+        <!--#endregion-->
+
+        <!--#region No installed games found-->
+        <Border
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Panel.ZIndex="1"
+            d:Panel.ZIndex="-1"
+            Background="{StaticResource PrimaryBackgroundColor}"
+            Visibility="{Binding NoGameFound, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="48"
+                Text="No installed games found." />
+        </Border>
+        <!--#endregion-->
+
+        <ListView
+            Grid.Row="0"
+            d:Width="Auto"
+            Background="{StaticResource SecondaryBackgroundColor}"
+            BorderBrush="{StaticResource ThirdBackgroundColor}"
+            BorderThickness="0,0,1,0"
+            Foreground="{StaticResource PrimaryForegroundColor}"
+            ItemsSource="{Binding Games}"
+            SelectedItem="{Binding SelectedGame}">
+
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border
+                                    Margin="1,0,1,0"
+                                    Padding="10,15,10,15"
+                                    Background="{TemplateBinding Background}"
+                                    BorderThickness="0"
+                                    Cursor="Hand">
+                                    <ContentPresenter
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        TextBlock.Foreground="{TemplateBinding Foreground}" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource ThirdBackgroundColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource ThirdForegroundColor}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundColor}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ListView.ItemContainerStyle>
+
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="100" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Image
+                            Grid.Column="0"
+                            Grid.Row="0"
+                            Width="100"
+                            Height="100"
+                            Source="{Binding Logo}" />
+                        <TextBlock
+                            Grid.Column="0"
+                            Grid.Row="1"
+                            Margin="10,0,5,0"
+                            VerticalAlignment="Center"
+                            Text="{Binding Name}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+    </Grid>
+</UserControl>

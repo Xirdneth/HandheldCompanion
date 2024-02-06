@@ -53,6 +53,7 @@
 
                 <ResourceDictionary Source="pack://Application:,,,/HandheldCompanion;component/Styles/NavigationView.xaml" />
                 <ResourceDictionary Source="pack://Application:,,,/HandheldCompanion;component/Styles/Slider.xaml" />
+                <ResourceDictionary Source="pack://Application:,,,/HandheldCompanion;component/Styles/Button.xaml" />
                 <ResourceDictionary Source="pack://Application:,,,/HandheldCompanion;component/Styles/ToggleSwitch.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/ColorPicker;component/Styles/DefaultColorPickerStyle.xaml" />
 
@@ -66,13 +67,28 @@
             <converters:PercentageConverter x:Key="PercentageConverter" />
             <converters:InvertBooleanConverter x:Key="InvertBooleanConverter" />
             <converters:InvertPercentageConverter x:Key="InvertPercentageConverter" />
-
+            <converters:IconToImageSourceConverter x:Key="IconToImageSourceConverter" />
+            <converters:ImageToImageSourceConverter x:Key="ImageToImageSourceConverter" />
             <math:MathConverter x:Key="Math" />
 
             <Style BasedOn="{StaticResource {x:Static ui:ThemeKeys.ExpanderCardStyleKey}}" TargetType="Expander">
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
             </Style>
+            
+            <SolidColorBrush x:Key="NavigationBarBackgroundColor" Color="#0D47A1" />
+            <SolidColorBrush x:Key="NavigationBarSelectedItemBackgroundColor" Color="#3162AF" />
+            <SolidColorBrush x:Key="NavigationBarForegroundColor" Color="#FFFFFF" />
 
+            <SolidColorBrush x:Key="PrimaryBackgroundColor" Color="#303030" />
+            <SolidColorBrush x:Key="PrimaryForegroundColor" Color="#FFFFFF" />
+
+            <SolidColorBrush x:Key="SecondaryBackgroundColor" Color="#333333" />
+            <SolidColorBrush x:Key="SecondaryForegroundColor" Color="#7fc9ff" />
+
+            <SolidColorBrush x:Key="ThirdBackgroundColor" Color="#444444" />
+            <SolidColorBrush x:Key="ThirdForegroundColor" Color="#bae0ff" />
+            
         </ResourceDictionary>
+
     </Application.Resources>
 </Application>

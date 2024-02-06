@@ -1,81 +1,404 @@
-﻿<common:GamepadWindow
-    x:Class="HandheldCompanion.Views.Windows.OverlayQuickTools"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
-    Title="QuickTools"
-    Width="640"
-    Height="720"
-    MinWidth="640"
-    MinHeight="450"
-    MaxWidth="640"
-    Margin="12"
-    ui:ThemeManager.IsThemeAware="True"
-    ui:TitleBar.ExtendViewIntoTitleBar="True"
-    ui:WindowHelper.SystemBackdropType="Mica"
-    ui:WindowHelper.UseAcrylicBackdrop="True"
-    ui:WindowHelper.UseAeroBackdrop="True"
-    ui:WindowHelper.UseModernWindowStyle="True"
-    Closing="Window_Closing"
-    Loaded="Window_Loaded"
-    ResizeMode="NoResize"
-    ShowActivated="False"
-    ShowInTaskbar="False"
-    Topmost="False"
-    WindowStyle="ToolWindow"
-    mc:Ignorable="d">
+﻿<common:GamepadWindow x:Class="HandheldCompanion.Views.Windows.OverlayQuickTools"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:common="clr-namespace:HandheldCompanion.Views.Classes"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                      xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
+                      xmlns:resx="clr-namespace:HandheldCompanion.Properties"
+                      Title="QuickTools"
+                      Width="640"
+                      Height="720"
+                      MinWidth="640"
+                      MinHeight="450"
+                      MaxWidth="640"
+                      Margin="0,0,12,12"
+                      ui:ThemeManager.IsThemeAware="True"
+                      ui:TitleBar.ExtendViewIntoTitleBar="True"
+                      ui:WindowHelper.SystemBackdropType="Mica"
+                      ui:WindowHelper.UseAcrylicBackdrop="True"
+                      ui:WindowHelper.UseAeroBackdrop="True"
+                      ui:WindowHelper.UseModernWindowStyle="True"
+                      Closing="Window_Closing"
+                      Loaded="Window_Loaded"
+                      ResizeMode="NoResize"
+                      ShowActivated="False"
+                      ShowInTaskbar="False"
+                      Topmost="False"
+                      WindowStyle="ToolWindow"
+                      mc:Ignorable="d">
 
-    <ui:NavigationView
-        Name="navView"
-        Margin="0,-30,0,0"
-        BackRequested="navView_BackRequested"
-        IsPaneToggleButtonVisible="False"
-        IsSettingsVisible="False"
-        ItemInvoked="navView_ItemInvoked"
-        Loaded="navView_Loaded"
-        PaneDisplayMode="Top"
-        SelectionFollowsFocus="Enabled">
+    <ui:NavigationView Name="navView"
+                       BackRequested="navView_BackRequested"
+                       IsPaneToggleButtonVisible="False"
+                       IsSettingsVisible="False"
+                       ItemInvoked="navView_ItemInvoked"
+                       Loaded="navView_Loaded"
+                       PaneDisplayMode="Top"
+                       SelectionFollowsFocus="Enabled">
 
         <ui:NavigationView.Header>
-            <TextBlock x:Name="navHeader" Margin="-34,-30,0,0" />
+            <Grid Margin="-50,-30,0,25">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Image Name="ImageDevice"
+                       Grid.Column="0"
+                       Width="70"
+                       Height="50"
+                       Margin="0,0,0,0">
+                    <Image.Source>
+                        <BitmapImage UriSource="/Resources/device_generic.png" />
+                    </Image.Source>
+                </Image>
+                <ui:SimpleStackPanel  Grid.Row="0"
+                                      Grid.Column="1">
+                    <Grid Margin="0,0,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="40" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:FontIcon Grid.Column="0"
+                                     Height="40"
+                                     HorizontalAlignment="Center"
+                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                     Glyph="&#xf10c;" />
+
+                        <Button Margin="0,0,5,0"
+                                   Grid.Column="1"
+                                   Name="QuickDevicePage"
+                                   Height="66"
+                                   Padding="10,10,10,10"
+                                   Background="Transparent"
+                                   Style="{DynamicResource menuButtonStyle}"
+                                   HorizontalAlignment="Stretch"
+                                   HorizontalContentAlignment="Stretch"
+                                   Click="QuickButton_Click">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="15" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:FontIcon Grid.Row="0"
+                                                Grid.Column="0"
+                                                FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                                Glyph="&#xE70A;"
+                                                VerticalAlignment="Center" />
+
+                                <ui:SimpleStackPanel Margin="0,0,0,0"
+                                                        Grid.Row="1"
+                                                        Grid.Column="0"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                                  Text="{x:Static resx:Resources.QuickDevicePage_Title}" />
+                                </ui:SimpleStackPanel>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Column="2"
+                                Margin="0,0,5,0"
+                                Name="QuickProfilesPage"
+                                Height="66"
+                                Padding="10,10,10,10"
+                                Background="Transparent"
+                                Style="{DynamicResource menuButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Click="QuickButton_Click">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="17" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:FontIcon Grid.Row="0"
+                                             Grid.Column="0"
+                                             HorizontalAlignment="Center"
+                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                             Glyph="&#xE77B;" />
+
+                                <ui:SimpleStackPanel Grid.Row="1"
+                                                     Grid.Column="0"
+                                                     Margin="0,0,0,0"
+                                                     VerticalAlignment="Center"
+                                                     HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                               Text="{x:Static resx:Resources.QuickProfilesPage_Title}" />
+
+                                </ui:SimpleStackPanel>
+
+                                <TextBlock Name="t_CurrentProfile"
+                                           Grid.Column="0"
+                                            Grid.Row="2"
+                                            Margin="0,0,0,0"
+                                            FontSize="10"
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                           Style="{StaticResource BodyTextBlockStyle}" />
+
+
+                            </Grid>
+                        </Button>
+                        <Button Grid.Column="3"
+                                Margin="0,0,5,0"
+                                Name="QuickOverlayPage"
+                                Height="66"
+                                Padding="10,10,10,10"
+                                Background="Transparent"
+                                Style="{DynamicResource menuButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Click="QuickButton_Click">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="17" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:FontIcon Grid.Row="0"
+                                             Grid.Column="0"
+                                             HorizontalAlignment="Center"
+                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                             Glyph="&#xE78B;" />
+
+                                <ui:SimpleStackPanel Grid.Row="1"
+                                                     Grid.Column="0"
+                                                     Margin="0,0,0,0"
+                                                     VerticalAlignment="Center"
+                                                     HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                               Text="{x:Static resx:Resources.QuickOverlayPage_Title}" />
+
+                                </ui:SimpleStackPanel>
+
+                                <TextBlock Name="t_CurrentOverlayLevel"
+                                           Grid.Column="0"
+                                           Grid.Row="2"
+                                           Margin="0,0,0,0"
+                                           FontSize="10"
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                           Style="{StaticResource BodyTextBlockStyle}" />
+
+
+                            </Grid>
+                        </Button>
+                        <Button Grid.Column="4"
+                                Name="QuickSuspenderPage"
+                                Height="66"
+                                Padding="10,10,10,10"
+                                Margin="0,0,5,0"
+                                Background="Transparent"
+                                Style="{DynamicResource menuButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Click="QuickButton_Click">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="15" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:FontIcon Grid.Row="0"
+                                             Grid.Column="0"
+                                             HorizontalAlignment="Center"
+                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                             Glyph="&#xEC0A;" />
+
+                                <ui:SimpleStackPanel Grid.Row="1"
+                                                     Grid.Column="0"
+                                                     Margin="0,0,0,0"
+                                                     VerticalAlignment="Center"
+                                                     HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                               Text="{x:Static resx:Resources.QuickSuspenderPage_Title}" />
+
+                                </ui:SimpleStackPanel>
+
+
+                            </Grid>
+                        </Button>
+                        <Button Grid.Column="5"
+                                Name="QuickLibraryPage"
+                                Height="66"
+                                Padding="10,10,10,10"
+                                Background="Transparent"
+                                Style="{DynamicResource menuButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Click="QuickButton_Click">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="15" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:FontIcon Grid.Row="0"
+                                             Grid.Column="0"
+                                             HorizontalAlignment="Center"
+                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                             Glyph="&#xe7fc;" />
+
+                                <ui:SimpleStackPanel Grid.Row="1"
+                                                     Grid.Column="0"
+                                                     Margin="0,0,0,0"
+                                                     VerticalAlignment="Center"
+                                                     HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                               Text="Library" />
+                                </ui:SimpleStackPanel>
+                            </Grid>
+                        </Button>
+                        <ui:FontIcon Grid.Column="6"
+                                     Height="40"
+                                     HorizontalAlignment="Center"
+                                     FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                                     Glyph="&#xf10d;" />
+                    </Grid>
+                </ui:SimpleStackPanel>
+            </Grid>
         </ui:NavigationView.Header>
 
         <ui:NavigationView.FooterMenuItems>
             <ui:NavigationViewItem IsEnabled="False">
                 <DockPanel Height="40">
-                    <ui:FontIcon
-                        Name="BatteryIndicatorIcon"
-                        VerticalAlignment="Center"
-                        FontSize="30" />
-                    <TextBlock
-                        Name="BatteryIndicatorPercentage"
-                        Margin="2,0,0,0"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource BodyTextBlockStyle}" />
-                    <TextBlock
-                        Name="BatteryIndicatorLifeRemaining"
-                        Margin="4,0,0,0"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource BodyTextBlockStyle}" />
-                    <TextBlock
-                        Name="Time"
-                        Margin="12,0,0,0"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource BodyTextBlockStyle}" />
+                    <ui:FontIcon Name="BatteryIndicatorIcon"
+                                 VerticalAlignment="Center"
+                                 FontSize="30" />
+                    <TextBlock Name="BatteryIndicatorPercentage"
+                               Margin="2,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="BatteryIndicatorLifeRemaining"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource BodyTextBlockStyle}" />
+                    <TextBlock Name="Time"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource BodyTextBlockStyle}" />
                 </DockPanel>
             </ui:NavigationViewItem>
             <ui:NavigationViewItem IsEnabled="False" />
         </ui:NavigationView.FooterMenuItems>
 
         <Grid>
-            <ui:ContentDialog Name="ContentDialog" />
-            <common:TouchScrollViewer
-                x:Name="scrollViewer"
-                Margin="0,-20,0,12"
-                PanningMode="VerticalOnly">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="1" 
+                  Margin="20,10,20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SimpleStackPanel Grid.Column="0"
+                                     Margin="0,0,30,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                                   Text="CPU"
+                                   VerticalAlignment="Top"
+                                   Grid.Column="0"
+                                   Grid.Row="0" />
+                        <TextBlock Grid.Column="0"
+                                   Grid.Row="1"
+                                   Name="CPULoad"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="Temp"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="1"
+                                   Grid.Row="1"
+                                   Margin="10,0,0,0"
+                                   Name="CPUTemperature"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="Temp"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="2"
+                                   Grid.Row="1"
+                                   Name="CPUPower"
+                                   Margin="10,0,0,0"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="Temp"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+                </ui:SimpleStackPanel>
+                <ui:SimpleStackPanel Grid.Column="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}"
+                               Text="Memory"
+                               VerticalAlignment="Top"
+                               HorizontalAlignment="Center"
+                               Grid.Row="0" />
+                        <TextBlock  Grid.Row="1"
+                                Name="MemoryUsage"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="Temp"
+                                TextWrapping="Wrap" />
+                    </Grid>
+                </ui:SimpleStackPanel>
+            </Grid>
+            <ui:ContentDialog Name="ContentDialog"
+                              Grid.Row="0" />
+            <common:TouchScrollViewer x:Name="scrollViewer"
+                                      Margin="0,0,0,0"
+                                      Padding="0,0,0,0"
+                                      PanningMode="VerticalOnly">
                 <ui:Frame Name="ContentFrame" />
             </common:TouchScrollViewer>
         </Grid>
