@@ -54,6 +54,7 @@ public partial class MainWindow : GamepadWindow
     public static HotkeysPage hotkeysPage;
     public static LayoutPage layoutPage;
     public static NotificationsPage notificationsPage;
+    public static LibraryPage libraryPage;
 
     // overlay(s) vars
     public static OverlayModel overlayModel;
@@ -418,8 +419,12 @@ public partial class MainWindow : GamepadWindow
     private void loadPages()
     {
         // initialize pages
+        libraryPage = new LibraryPage("library");
+        libraryPage.Loaded += LibraryPage_Loaded;
+        libraryPage.StatusChanged += LibraryPage_LayoutUpdated;
+
         controllerPage = new ControllerPage("controller");
-        controllerPage.Loaded += ControllerPage_Loaded;
+        //controllerPage.Loaded += ControllerPage_Loaded;
 
         devicePage = new DevicePage("device");
         performancePage = new PerformancePage("performance");
@@ -432,7 +437,9 @@ public partial class MainWindow : GamepadWindow
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
+
         // store pages
+        _pages.Add("LibraryPage", libraryPage);
         _pages.Add("ControllerPage", controllerPage);
         _pages.Add("DevicePage", devicePage);
         _pages.Add("PerformancePage", performancePage);
@@ -526,6 +533,24 @@ public partial class MainWindow : GamepadWindow
         IsReady = true;
     }
 
+    private void LibraryPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (IsReady)
+            return;
+
+        // hide splashscreen
+        if (splashScreen is not null)
+            splashScreen.Close();
+
+        // home page has loaded, display main window
+        WindowState = SettingsManager.GetBoolean("StartMinimized")
+            ? WindowState.Minimized
+            : (WindowState)SettingsManager.GetInt("MainWindowState");
+        prevWindowState = (WindowState)SettingsManager.GetInt("MainWindowPrevState");
+
+        IsReady = true;
+    }
+
     private void NotificationsPage_LayoutUpdated(int status)
     {
         bool hasNotification = Convert.ToBoolean(status);
@@ -535,6 +560,15 @@ public partial class MainWindow : GamepadWindow
         {
             HasNotifications.Visibility = hasNotification ? Visibility.Visible : Visibility.Collapsed;
         });
+    }
+
+    private void LibraryPage_LayoutUpdated(int status)
+    {
+        // UI thread (async)
+        //Application.Current.Dispatcher.BeginInvoke(() =>
+        //{
+            
+        //});
     }
 
     private void VirtualManager_ControllerSelected(HIDmode HIDmode)
@@ -705,6 +739,7 @@ public partial class MainWindow : GamepadWindow
         UpdateManager.Stop();
 
         // closing page(s)
+        libraryPage.Page_Closed();
         controllerPage.Page_Closed();
         profilesPage.Page_Closed();
         settingsPage.Page_Closed();
@@ -791,7 +826,8 @@ public partial class MainWindow : GamepadWindow
         // If navigation occurs on SelectionChanged, this isn't needed.
         // Because we use ItemInvoked to navigate, we need to call Navigate
         // here to load the home page.
-        preNavItemTag = "ControllerPage";
+        preNavItemTag = "LibraryPage";
+        //preNavItemTag = "ControllerPage";
         NavView_Navigate(preNavItemTag);
     }
 

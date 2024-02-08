@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using craftersmine.SteamGridDBNet;
 using GameLib;
 using GameLib.Core;
+using GameLib.Plugin.RiotGames.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,7 +35,7 @@ public partial class GameViewModel : ViewModelBase
     private ObservableCollection<GameExtended> _games = default!;
 
     [ObservableProperty]
-    private IGame? _selectedGame;
+    private GameExtended? _selectedGame;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -105,7 +107,7 @@ public partial class GameViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public static void RunGame(IGame? game)
+    public static void RunGame(GameExtended? game)
     {
         if (game is null)
         {
@@ -123,13 +125,13 @@ public partial class GameViewModel : ViewModelBase
             Process.Start(new ProcessStartInfo()
             {
                 UseShellExecute = true,
-                FileName = game.Executable,
+                FileName = game.Executables.FirstOrDefault(),
                 WorkingDirectory = game.WorkingDir
             });
+            
         }
         catch { /* ignore */ }
     }
-
     [RelayCommand]
     public static void RunLaunchString(IGame? game)
     {
@@ -217,13 +219,12 @@ public partial class GameViewModel : ViewModelBase
                 };
                 SteamGridDbGame[]? gameSearch = await _steamGridDb.SearchForGamesAsync(game.Name);
                 var GameId = gameSearch[0].Id;
-
+                Test.MetaData = gameSearch[0];
                 //SteamGridDbGame? gameById = await _steamGridDb.GetGameByIdAsync(game.Id);
-                //SteamGridDbGrid[]? grids = await _steamGridDb.GetGridsByGameIdAsync(game.Id);
+                SteamGridDbGrid[]? grids = await _steamGridDb.GetGridsByGameIdAsync(GameId);
                 SteamGridDbLogo[]? Logo = await _steamGridDb.GetLogosByGameIdAsync(GameId);
-
-                
-                if(Logo.Any())
+                SteamGridDbGame? game2 = await _steamGridDb.GetGameByIdAsync(GameId);
+                if (Logo.Any())
                 {
                     Stream LogoStream = await Logo[0].GetImageAsStreamAsync(false);
                     //Stream IconStream = await Icon[0].GetImageAsStreamAsync(false);
@@ -271,6 +272,7 @@ public partial class GameViewModel : ViewModelBase
 public class GameExtended : IGame
 {
     public ImageSource? Logo { get; set; }
+    public SteamGridDbGame? MetaData { get; set; }
     public Icon? ExecutableIcon { get; set; }
 
     public string Id { get; set; }

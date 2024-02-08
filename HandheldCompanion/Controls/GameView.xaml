@@ -8,10 +8,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:HandheldCompanion.ViewModels"
     xmlns:local="clr-namespace:HandheldCompanion.ViewModels"
+    xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
     d:DataContext="{d:DesignInstance Type=viewmodels:GameViewModel}"
     d:DesignHeight="1200"
     d:DesignWidth="640"
-    Background="{StaticResource PrimaryBackgroundColor}"
+    
     FontSize="16"
     Foreground="{StaticResource PrimaryForegroundColor}"
     mc:Ignorable="d">
@@ -30,8 +31,9 @@
         </Style>
 
         <Style TargetType="ListBox">
-            <Setter Property="Width" Value="500" />
-            <Setter Property="Height" Value="100" />
+            <Setter Property="Width" Value="Auto" />
+            <Setter Property="Height" Value="Auto" />
+            <Setter Property="Background" Value="Transparent"/>
 
         </Style>
 
@@ -45,6 +47,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -94,31 +97,130 @@
         </Border>
         <!--#endregion-->
 
-        <ListView
+        <ui:SimpleStackPanel
+            Grid.Row="1"
+            Spacing="6">
+            <ui:SimpleStackPanel 
+                Name="SelectedGame" 
+                Spacing="6"
+                Margin="0,50,0,0"
+                Background="{StaticResource PrimaryBackgroundColor}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image
+                         Grid.Column="0"
+                         Grid.Row="0"
+                         Height="200"
+                         Width="200"
+                         Stretch="Uniform"
+                         VerticalAlignment="Stretch"
+                         HorizontalAlignment="Center"
+                         Source="{Binding SelectedGame.Logo}" />
+                    <Grid
+                        Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Margin="0,0,0,0"
+                        VerticalAlignment="Center"
+                        TextWrapping="WrapWithOverflow"
+                        HorizontalAlignment="Stretch"
+                        TextAlignment="Center"
+                        Text="{Binding SelectedGame.Executables[0]}" />
+                        <TextBlock
+                        Grid.Column="0"
+                        Grid.Row="2"
+                        Margin="0,0,0,0"
+                        VerticalAlignment="Center"
+                        TextWrapping="WrapWithOverflow"
+                        HorizontalAlignment="Stretch"
+                        TextAlignment="Center"
+                        Text="{Binding SelectedGame.MetaData.FullImageUrl}" />
+                        
+                        <Button                          
+                            Grid.Column="0"
+                            Grid.Row="0"
+                            Name="B_LaunchGame"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding RunGameCommand}"
+                            CommandParameter="{Binding SelectedGame}"
+                            ToolTip="Start Game"
+                            Content="Play"
+                            Style="{DynamicResource AccentButtonStyle}">
+                        </Button>
+                        <Button                          
+                            Grid.Column="0"
+                            Grid.Row="3"
+                            Name="B_IsRunning"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding RefreshGameIsRunningCommand}"
+                            ToolTip="Check Is Running"
+                            Content="Is Running?"
+                            Style="{DynamicResource AccentButtonStyle}">
+                        </Button>
+
+                        <Image
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            Width="24"
+                            Height="24"
+                            HorizontalAlignment="Left"
+                            Source="{Binding IsRunningLogo}" />
+                    </Grid>
+                </Grid>
+
+            </ui:SimpleStackPanel>
+            <!--<TextBlock
+                Grid.Column="0"
+                Grid.Row="1"
+                Padding="10,10,10,10"
+                VerticalAlignment="Stretch"
+                TextWrapping="WrapWithOverflow"
+                HorizontalAlignment="Stretch"
+                TextAlignment="Left"
+                Text="All Games" />-->
+        </ui:SimpleStackPanel>
+        <ListBox 
             Grid.Row="0"
             d:Width="Auto"
-            Background="{StaticResource SecondaryBackgroundColor}"
-            BorderBrush="{StaticResource ThirdBackgroundColor}"
-            BorderThickness="0,0,1,0"
+            d:Height="Auto"
+            Padding="0,10,0,20"
+            BorderThickness="0,0,0,0"
             Foreground="{StaticResource PrimaryForegroundColor}"
-            ItemsSource="{Binding Games}"
-            SelectedItem="{Binding SelectedGame}">
-
-            <ListView.ItemContainerStyle>
-                <Style TargetType="ListViewItem">
+            ItemsSource="{Binding Games}" 
+            SelectedItem="{Binding SelectedGame,Mode=TwoWay}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
                                 <Border
-                                    Margin="1,0,1,0"
-                                    Padding="10,15,10,15"
                                     Background="{TemplateBinding Background}"
-                                    BorderThickness="0"
+                                    BorderThickness="4 0 0 0" 
+                                    BorderBrush="Transparent"
                                     Cursor="Hand">
                                     <ContentPresenter
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        TextBlock.Foreground="{TemplateBinding Foreground}" />
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    TextBlock.Foreground="{TemplateBinding Foreground}" />
                                 </Border>
                             </ControlTemplate>
                         </Setter.Value>
@@ -128,19 +230,37 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{StaticResource ThirdBackgroundColor}" />
                             <Setter Property="Foreground" Value="{StaticResource ThirdForegroundColor}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{TemplateBinding Background}" BorderThickness="4 0 0 0" BorderBrush="{StaticResource ThirdForegroundColor}">
+                                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource ThirdForegroundColor}" />
+                            <Setter Property="Background" Value="{StaticResource PrimaryBackgroundColor}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{TemplateBinding Background}" BorderThickness="4 0 0 0" BorderBrush="{StaticResource ThirdForegroundColor}">
+                                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-            </ListView.ItemContainerStyle>
-
-            <ListView.ItemTemplate>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid Background="Transparent">
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -151,19 +271,23 @@
                         <Image
                             Grid.Column="0"
                             Grid.Row="0"
-                            Width="100"
-                            Height="100"
+                            Stretch="Uniform"
+                            VerticalAlignment="Stretch"
+                            HorizontalAlignment="Stretch"
                             Source="{Binding Logo}" />
+
                         <TextBlock
                             Grid.Column="0"
                             Grid.Row="1"
-                            Margin="10,0,5,0"
-                            VerticalAlignment="Center"
+                            Margin="0,0,0,0"
+                            VerticalAlignment="Stretch"
+                            TextWrapping="WrapWithOverflow"
+                            HorizontalAlignment="Stretch"
+                            TextAlignment="Center"
                             Text="{Binding Name}" />
                     </Grid>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </UserControl>

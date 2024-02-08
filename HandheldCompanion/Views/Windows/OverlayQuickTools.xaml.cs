@@ -85,7 +85,6 @@ public partial class OverlayQuickTools : GamepadWindow
     public QuickProfilesPage profilesPage;
     public QuickOverlayPage overlayPage;
     public QuickSuspenderPage suspenderPage;
-    public QuickLibraryPage libraryPage;
     public WindowSinker sinker;
 
 
@@ -132,7 +131,6 @@ public partial class OverlayQuickTools : GamepadWindow
         profilesPage = new("quickprofiles");
         overlayPage = new("quickoverlay");
         suspenderPage = new("quicksuspender");
-        libraryPage = new("library");
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
@@ -140,17 +138,6 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickProfilesPage", profilesPage);
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
-        _pages.Add("QuickLibraryPage", libraryPage);
-
-        var ImageSource =
-            new Uri($"pack://application:,,,/Resources/{MainWindow.CurrentDevice.ProductIllustration}.png");
-
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            // Motherboard properties
-            ImageDevice.Source = new BitmapImage(ImageSource);
-        });
     }
 
     private void PlatformManager_CPULoadChanged(float? value)

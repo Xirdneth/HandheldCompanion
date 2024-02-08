@@ -4519,6 +4519,15 @@ namespace HandheldCompanion.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Library.
+        /// </summary>
+        public static string MainWindow_navLibrary {
+            get {
+                return ResourceManager.GetString("MainWindow_navLibrary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Notifications.
         /// </summary>
         public static string MainWindow_navNotifications {

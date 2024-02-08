@@ -2925,4 +2925,7 @@ Motion input toggle: press selected button(s) to switch motion state.</value>
   <data name="DevicePage_Lenovo_Settings" xml:space="preserve">
     <value>Lenovo Legion Go settings</value>
   </data>
+  <data name="MainWindow_navLibrary" xml:space="preserve">
+    <value>Library</value>
+  </data>
 </root>

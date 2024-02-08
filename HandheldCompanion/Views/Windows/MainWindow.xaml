@@ -40,6 +40,15 @@
         ShoulderNavigationEnabled="Always">
 
         <ui:NavigationView.MenuItems>
+            <ui:NavigationViewItem
+                Name="navLibrary"
+                Content="{x:Static resx:Resources.MainWindow_navLibrary}"
+                Tag="LibraryPage">
+                <ui:NavigationViewItem.Icon>
+                    <ui:FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xe967;" />
+                </ui:NavigationViewItem.Icon>
+            </ui:NavigationViewItem>
+            
             <!--  Game icon  -->
             <ui:NavigationViewItem
                 Name="navController"

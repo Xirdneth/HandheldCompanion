@@ -46,20 +46,21 @@
                     <ColumnDefinition Width="70" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Image Name="ImageDevice"
+                <Image Name="LogoImage"
                        Grid.Column="0"
                        Width="70"
                        Height="50"
                        Margin="0,0,0,0">
                     <Image.Source>
-                        <BitmapImage UriSource="/Resources/device_generic.png" />
+                        <BitmapImage UriSource="/Resources/icon.png" />
                     </Image.Source>
                 </Image>
                 <ui:SimpleStackPanel  Grid.Row="0"
                                       Grid.Column="1">
                     <Grid Margin="0,0,0,0">
                         <Grid.RowDefinitions>
-                            <RowDefinition />
+                            <RowDefinition Height="31*" />
+                            <RowDefinition Height="35*"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="40" />
@@ -71,11 +72,11 @@
                             <ColumnDefinition Width="40" />
                         </Grid.ColumnDefinitions>
 
-                        <ui:FontIcon Grid.Column="0"
+                        <ui:FontIcon
                                      Height="40"
                                      HorizontalAlignment="Center"
                                      FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                     Glyph="&#xf10c;" />
+                                     Glyph="&#xf10c;" Margin="0,13,0,13" Grid.RowSpan="2" />
 
                         <Button Margin="0,0,5,0"
                                    Grid.Column="1"
@@ -84,9 +85,8 @@
                                    Padding="10,10,10,10"
                                    Background="Transparent"
                                    Style="{DynamicResource menuButtonStyle}"
-                                   HorizontalAlignment="Stretch"
                                    HorizontalContentAlignment="Stretch"
-                                   Click="QuickButton_Click">
+                                   Click="QuickButton_Click" Grid.RowSpan="2">
 
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -120,9 +120,8 @@
                                 Padding="10,10,10,10"
                                 Background="Transparent"
                                 Style="{DynamicResource menuButtonStyle}"
-                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch"
-                                Click="QuickButton_Click">
+                                Click="QuickButton_Click" Grid.RowSpan="2">
 
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -169,9 +168,8 @@
                                 Padding="10,10,10,10"
                                 Background="Transparent"
                                 Style="{DynamicResource menuButtonStyle}"
-                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch"
-                                Click="QuickButton_Click">
+                                Click="QuickButton_Click" Grid.RowSpan="2">
 
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -211,16 +209,15 @@
 
                             </Grid>
                         </Button>
-                        <Button Grid.Column="4"
+                        <Button Grid.Column="3"
                                 Name="QuickSuspenderPage"
                                 Height="66"
                                 Padding="10,10,10,10"
-                                Margin="0,0,5,0"
+                                Margin="96,0,5,0"
                                 Background="Transparent"
                                 Style="{DynamicResource menuButtonStyle}"
-                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch"
-                                Click="QuickButton_Click">
+                                Click="QuickButton_Click" Grid.ColumnSpan="2" Grid.RowSpan="2">
 
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -250,46 +247,11 @@
 
                             </Grid>
                         </Button>
-                        <Button Grid.Column="5"
-                                Name="QuickLibraryPage"
-                                Height="66"
-                                Padding="10,10,10,10"
-                                Background="Transparent"
-                                Style="{DynamicResource menuButtonStyle}"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                Click="QuickButton_Click">
-
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="15" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ui:FontIcon Grid.Row="0"
-                                             Grid.Column="0"
-                                             HorizontalAlignment="Center"
-                                             FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                             Glyph="&#xe7fc;" />
-
-                                <ui:SimpleStackPanel Grid.Row="1"
-                                                     Grid.Column="0"
-                                                     Margin="0,0,0,0"
-                                                     VerticalAlignment="Center"
-                                                     HorizontalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyTextBlockStyle}"
-                                               Text="Library" />
-                                </ui:SimpleStackPanel>
-                            </Grid>
-                        </Button>
                         <ui:FontIcon Grid.Column="6"
                                      Height="40"
                                      HorizontalAlignment="Center"
                                      FontFamily="{DynamicResource SymbolThemeFontFamily}"
-                                     Glyph="&#xf10d;" />
+                                     Glyph="&#xf10d;" Margin="0,13,0,13" Grid.RowSpan="2" />
                     </Grid>
                 </ui:SimpleStackPanel>
             </Grid>
