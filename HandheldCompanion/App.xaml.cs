@@ -1,9 +1,13 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using PluginBase;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Windows;
@@ -97,8 +101,58 @@ public partial class App : Application
         // Handler for exceptions in threads behind forms.
         System.Windows.Forms.Application.ThreadException += Application_ThreadException;
 
-        MainWindow = new MainWindow(fileVersionInfo, CurrentAssembly);
-        MainWindow.Show();
+        try
+        {
+            string[] TestArgs = new string[]
+            {
+                "hello"
+            };
+
+            string[] pluginPaths = new string[]
+            {
+                // Paths to plugins to load.
+                @"HandheldCompanion\HelloPlugin\bin\Debug\net8.0\HelloPlugin.dll"
+            };
+
+            IEnumerable<ICommand> commands = pluginPaths.SelectMany(pluginPath =>
+            {
+                Assembly pluginAssembly = LoadPlugin(pluginPath);
+                return CreateCommands(pluginAssembly);
+            }).ToList();
+
+            if (TestArgs.Length == 0)
+            {
+                foreach (ICommand command in commands)
+                {
+                    LogManager.LogInformation($"{command.Name}\t - {command.Description}");
+                }
+            }
+            else
+            {
+                foreach (string commandName in TestArgs)
+                {
+                    LogManager.LogInformation($"-- {commandName} --");
+
+                    ICommand command = commands.FirstOrDefault(c => c.Name == commandName);
+                    if (command == null)
+                    {
+                        LogManager.LogInformation("No such command is known.");
+                        return;
+                    }
+
+                    command.Execute();
+
+                    LogManager.LogInformation($"-- {commandName} --");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError(ex.Message);
+        }
+
+        //MainWindow = new MainWindow(fileVersionInfo, CurrentAssembly);
+        //MainWindow.Show();
     }
 
     private void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
@@ -113,5 +167,47 @@ public partial class App : Application
         var ex = default(Exception);
         ex = (Exception)e.ExceptionObject;
         LogManager.LogCritical(ex.Message + "\t" + ex.StackTrace);
+    }
+
+    static Assembly LoadPlugin(string relativePath)
+    {
+        // Navigate up to the solution root
+        string root = Path.GetFullPath(Path.Combine(
+            Path.GetDirectoryName(
+                Path.GetDirectoryName(
+                    Path.GetDirectoryName(
+                        Path.GetDirectoryName(
+                            Path.GetDirectoryName(typeof(App).Assembly.Location)))))));
+
+        string pluginLocation = Path.GetFullPath(Path.Combine(root, relativePath.Replace('\\', Path.DirectorySeparatorChar)));
+        Console.WriteLine($"Loading commands from: {pluginLocation}");
+        PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
+        return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+    }
+
+    static IEnumerable<ICommand> CreateCommands(Assembly assembly)
+    {
+        int count = 0;
+
+        foreach (Type type in assembly.GetTypes())
+        {
+            if (typeof(ICommand).IsAssignableFrom(type))
+            {
+                ICommand result = Activator.CreateInstance(type) as ICommand;
+                if (result != null)
+                {
+                    count++;
+                    yield return result;
+                }
+            }
+        }
+
+        if (count == 0)
+        {
+            string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
+            throw new ApplicationException(
+                $"Can't find any type which implements ICommand in {assembly} from {assembly.Location}.\n" +
+                $"Available types: {availableTypes}");
+        }
     }
 }

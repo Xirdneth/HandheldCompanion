@@ -183,6 +183,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\PluginBase\PluginBase.csproj" />
     <ProjectReference Include="..\steam-hidapi.net\steam-hidapi.net.csproj" />
   </ItemGroup>
 
