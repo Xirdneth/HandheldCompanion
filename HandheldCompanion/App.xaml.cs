@@ -1,9 +1,15 @@
 ﻿using GameLib;
+using HandheldCompanion.Extensions;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.ViewModels;
 using HandheldCompanion.Views;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Configuration;
+using Serilog;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -23,19 +29,45 @@ public partial class App : Application
     ///     Initializes the singleton application object.  This is the first line of authored code
     ///     executed, and as such is the logical equivalent of main() or WinMain().
     /// </summary>
-    private readonly IServiceProvider _serviceProvider;
+    private IHost _host;
+
+    private Assembly? CurrentAssembly;
+    private FileVersionInfo? fileVersionInfo;
+    private string? currentCulture;
+    private CultureInfo? cultureInfo;
     public App()
     {
         InitializeComponent();
-        // get current assembly
-        var CurrentAssembly = Assembly.GetExecutingAssembly();
-        var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
-        IServiceCollection services = new ServiceCollection();
-        //services.AddTransient<GameViewModel>();
-        //services.AddSingleton<LauncherManager>();
-        services.AddSingleton(s => new MainWindow(fileVersionInfo, CurrentAssembly));
-        //services.AddSingleton(s => new LauncherManager());
-        _serviceProvider = services.BuildServiceProvider();
+
+        CurrentAssembly = Assembly.GetExecutingAssembly();
+        fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
+        currentCulture = SettingsManager.GetString("CurrentCulture");
+        cultureInfo = CultureInfo.CurrentCulture;
+
+        _host = new HostBuilder()
+            .ConfigureAppConfiguration((context, configurationBuilder) =>
+            {
+                configurationBuilder.SetBasePath(context.HostingEnvironment.ContentRootPath);
+                configurationBuilder.AddJsonFile("HandheldCompanion.json", optional: false);
+            })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddLiteDb(@"HandheldCompanion.db");
+                services.AddSingleton<MainWindow>();
+                services.AddLogging();
+            })
+            .ConfigureLogging((context, logging) =>
+            {
+                logging.ClearProviders();
+                logging.AddConfiguration(context.Configuration);
+                Log.Logger = new LoggerConfiguration()
+                 .ReadFrom.Configuration(context.Configuration).CreateLogger();
+                logging.AddConfiguration(context.Configuration.GetSection("Logging"));
+                logging.AddSerilog(dispose: true);
+
+            })
+            .Build();
+
     }
 
     /// <summary>
@@ -43,14 +75,10 @@ public partial class App : Application
     ///     will be used such as when the application is launched to open a specific file.
     /// </summary>
     /// <param name="args">Details about the launch request and process.</param>
-    protected override void OnStartup(StartupEventArgs args)
+    protected async override void OnStartup(StartupEventArgs args)
     {
-        // get current assembly
-        var CurrentAssembly = Assembly.GetExecutingAssembly();
-        var fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
+        await _host.StartAsync();
 
-        // initialize log
-        LogManager.Initialize("HandheldCompanion");
         LogManager.LogInformation("{0} ({1})", CurrentAssembly.GetName(), fileVersionInfo.FileVersion);
 
         using (var process = Process.GetCurrentProcess())
@@ -74,14 +102,10 @@ public partial class App : Application
                 }
         }
 
-        // define culture settings
-        var CurrentCulture = SettingsManager.GetString("CurrentCulture");
-        var culture = CultureInfo.CurrentCulture;
-
-        switch (CurrentCulture)
+        switch (currentCulture)
         {
             default:
-                culture = new CultureInfo("en-US");
+                cultureInfo = new CultureInfo("en-US");
                 break;
             case "fr-FR":
             case "en-US":
@@ -93,14 +117,14 @@ public partial class App : Application
             case "es-ES":
             case "ja-JP":
             case "ru-RU":
-                culture = new CultureInfo(CurrentCulture);
+                cultureInfo = new CultureInfo(currentCulture);
                 break;
         }
 
-        Thread.CurrentThread.CurrentCulture = culture;
-        Thread.CurrentThread.CurrentUICulture = culture;
-        CultureInfo.DefaultThreadCurrentCulture = culture;
-        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = cultureInfo;
+        Thread.CurrentThread.CurrentUICulture = cultureInfo;
+        CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+        CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
         // handle exceptions nicely
         var currentDomain = default(AppDomain);
@@ -110,8 +134,8 @@ public partial class App : Application
         // Handler for exceptions in threads behind forms.
         System.Windows.Forms.Application.ThreadException += Application_ThreadException;
 
-        MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-        MainWindow.Show();
+        var mainWindow = _host.Services.GetService<MainWindow>();
+        mainWindow?.Show();
     }
 
     private void Application_ThreadException(object sender, ThreadExceptionEventArgs e)

@@ -1,4 +1,5 @@
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Database;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -64,8 +65,9 @@ public partial class MainWindow : GamepadWindow
     public static string CurrentExe, CurrentPath;
 
     private static MainWindow CurrentWindow;
+    public Assembly? CurrentAssembly;
     public static FileVersionInfo fileVersionInfo;
-
+    private LiteDbContext liteDb;
     public static string InstallPath = string.Empty;
     public static string SettingsPath = string.Empty;
     public static string CurrentPageName = string.Empty;
@@ -83,11 +85,13 @@ public partial class MainWindow : GamepadWindow
 
     private const int WM_QUERYENDSESSION = 0x0011;
 
-    public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
+
+    public MainWindow(LiteDbContext liteDb)
     {
         InitializeComponent();
-
-        fileVersionInfo = _fileVersionInfo;
+        CurrentAssembly = Assembly.GetExecutingAssembly();
+        fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
+        this.liteDb = liteDb;
         CurrentWindow = this;
 
         // used by system manager, controller manager
@@ -419,7 +423,7 @@ public partial class MainWindow : GamepadWindow
     private void loadPages()
     {
         // initialize pages
-        libraryPage = new LibraryPage("library");
+        libraryPage = new LibraryPage("library",liteDb);
         libraryPage.Loaded += LibraryPage_Loaded;
         libraryPage.StatusChanged += LibraryPage_LayoutUpdated;
 
