@@ -89,6 +89,7 @@ namespace HandheldCompanion.DataAccess
             {
                 try
                 {
+                    launcherManager.Refresh();
                     var InstalledGames = launcherManager.GetLaunchers().Where((ILauncher launcher) => launcher.Name == launcherName).FirstOrDefault();
                     if (InstalledGames != null)
                     {
@@ -99,7 +100,7 @@ namespace HandheldCompanion.DataAccess
 
                         foreach (var game in games)
                         {
-                            if (!FindGameInDatabse(game).Result)
+                            if (!FindGameInDatabse(game.baseGame.Id))
                             {
                                 LogManager.LogInformation($"Importing Games from {launcherName}...");
                                 await InsertGameData(game);
@@ -141,7 +142,7 @@ namespace HandheldCompanion.DataAccess
                 LogManager.LogError(ex.Message);
             }
         }
-        public async Task DownloadImageData(Game game)
+        public async Task<bool> DownloadImageData(Game game)
         {
             try
             {
@@ -210,11 +211,12 @@ namespace HandheldCompanion.DataAccess
                         }
                     }
                 }
-
+                return await Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 LogManager.LogError(ex.Message);
+                return await Task.FromResult(true);
             }
         }
 
@@ -255,7 +257,6 @@ namespace HandheldCompanion.DataAccess
             int CountDeleted = 0;
             await Task.Run(() => {
                 fileStorage.FindAll().ToList().ForEach(w => {
-                    fileStorage.Delete(w.Id);
                     if (fileStorage.Delete(w.Id))
                     {
                         CountDeleted++;
@@ -277,15 +278,13 @@ namespace HandheldCompanion.DataAccess
             });
         }
 
-        public async Task<bool> FindGameInDatabse(Game game)
+        public bool FindGameInDatabse(string gameId)
         {
             try
             {
-                if (game != null)
+                if (gameId != null)
                 {
-                    return await Task.Run(() => { 
-                        return dbBaseGame.Exists(f => f.Id == game.baseGameId);
-                    });
+                    return dbBaseGame.Exists(f => f.Id == gameId);
                 }
                 else
                 {
@@ -303,17 +302,19 @@ namespace HandheldCompanion.DataAccess
         {
             try
             {
-                ClearFilefileStorage();
-                dbGames.Include(i => i.baseGame).FindAll().ToList().ForEach(async f =>
+                await ClearFilefileStorage();
+                var gamelist = dbGames.Include(i => i.baseGame).FindAll().ToList();
+                foreach (var game in gamelist)
                 {
-                    await DownloadImageData(f);
-                });
-                return true;
+                    await DownloadImageData(game);
+                }
+
+                return await Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 LogManager.LogError(ex.Message);
-                return true;
+                return await Task.FromResult(true);
             }
         }
     }

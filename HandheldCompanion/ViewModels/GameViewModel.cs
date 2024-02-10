@@ -11,6 +11,7 @@ using HandheldCompanion.Managers;
 using iNKORE.UI.WPF.Modern.Controls;
 using LiteDB;
 using Microsoft.Extensions.DependencyModel;
+using SharpDX;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -198,7 +199,7 @@ public partial class GameViewModel : ViewModelBase
     [RelayCommand]
     public async Task DebugFileStorageClearAsync()
     {
-        IsLoading = false;
+        IsLoading = true;
         await libraryDb.ClearFilefileStorage();
         LoadLocalGames();
     }
@@ -206,9 +207,18 @@ public partial class GameViewModel : ViewModelBase
     [RelayCommand]
     public async Task DebugReDownloadMetadataAsync()
     {
-        IsLoading = false;
-        await libraryDb.ReDownloadMetadata();
-        LoadLocalGames();
+        //await Application.Current.Dispatcher.BeginInvoke(async () =>
+        //{
+
+        //});
+
+        IsLoading = true;
+        NoGameFound = false;
+        var result = await Task.Run(() => libraryDb.ReDownloadMetadata());
+        if (result)
+        {
+            LoadLocalGames();
+        } 
     }
 
 
@@ -232,7 +242,7 @@ public partial class GameViewModel : ViewModelBase
             {
                 IsLoading = true;
                 NoGameFound = false;
-                await Task.Run(async () => await libraryDb.ImportGamesToFromLauncher(LauncherName));
+                await Task.Run(() => libraryDb.ImportGamesToFromLauncher(LauncherName));
                 LoadLocalGames();
                 LogManager.LogInformation($"User Imported from {LauncherName}");
             }
