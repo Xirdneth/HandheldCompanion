@@ -55,7 +55,7 @@ namespace HandheldCompanion.DataAccess
             BsonMapper.Global.EnumAsInteger = true;
         }
 
-        public async Task<IEnumerable<Game>> GetAllGames(string launcherName)
+        public async Task<IEnumerable<Game>> GetAllGames()
         {
             try
             {
@@ -99,7 +99,14 @@ namespace HandheldCompanion.DataAccess
 
                         foreach (var game in games)
                         {
-                            await DownloadImageData(game);
+                            if (!FindGameInDatabse(game).Result)
+                            {
+                                LogManager.LogInformation($"Importing Games from {launcherName}...");
+                                await InsertGameData(game);
+                                LogManager.LogInformation($"Downloading {game.baseGame.Name} Images...");
+                                await DownloadImageData(game);
+                            }
+                            
                         }
                     }
                 }
@@ -109,14 +116,37 @@ namespace HandheldCompanion.DataAccess
                 }
             });
         }
+        public async Task InsertGameData(Game game)
+        {
+            try
+            {
+                if (game != null)
+                {
+                    game.baseGameId = game.baseGame.Id;
+                    LogManager.LogInformation($"Importing {game.baseGame.Name}");
+                    dbBaseGame.Insert(game.baseGame);
 
+                    var gameSearchByName = await steamGridDb.SearchForGamesAsync(game.baseGame.Name);
+                    SteamGridDbGame? gameSearch = gameSearchByName.Where(w => w.Name == game.baseGame.Name).FirstOrDefault();
+                    if (gameSearch != null)
+                    {
+                        dbGamesMetaData.Insert(gameSearch);
+                    }
+                    dbGames.Insert(game);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError(ex.Message);
+            }
+        }
         public async Task DownloadImageData(Game game)
         {
             try
             {
                 if (game != null)
                 {
-                    dbBaseGame.Insert(game.baseGame);
                     var gameSearchByName = await steamGridDb.SearchForGamesAsync(game.baseGame.Name);
                     SteamGridDbGame? gameSearch = gameSearchByName.Where(w => w.Name == game.baseGame.Name).FirstOrDefault();
                     if (gameSearch != null)
@@ -124,7 +154,6 @@ namespace HandheldCompanion.DataAccess
                         var GameMetaData = gameSearch;
 
                         game.metaData = GameMetaData;
-                        dbGamesMetaData.Insert(game.metaData);
 
                         SteamGridDbHero[]? Heros = await steamGridDb.GetHeroesByGameIdAsync(GameMetaData.Id);
                         SteamGridDbGrid[]? Grids = await steamGridDb.GetGridsByGameIdAsync(GameMetaData.Id);
@@ -134,6 +163,7 @@ namespace HandheldCompanion.DataAccess
                         Stream ArtStream;
                         if (Heros.Any())
                         {
+                            LogManager.LogInformation($"Downloading Hero Image for {game.baseGame.Name}");
                             var imageSource = new BitmapImage();
                             
                             var Hero = Heros.FirstOrDefault();
@@ -145,6 +175,7 @@ namespace HandheldCompanion.DataAccess
 
                         if (Grids.Any())
                         {
+                            LogManager.LogInformation($"Downloading Grid Image for {game.baseGame.Name}");
                             var imageSource = new BitmapImage();
 
                             var Grid = Grids.FirstOrDefault();
@@ -156,6 +187,7 @@ namespace HandheldCompanion.DataAccess
 
                         if (Logos.Any())
                         {
+                            LogManager.LogInformation($"Downloading Logo Image for {game.baseGame.Name}");
                             var imageSource = new BitmapImage();
 
                             var Logo = Logos.FirstOrDefault();
@@ -167,6 +199,7 @@ namespace HandheldCompanion.DataAccess
 
                         if (Icons.Any())
                         {
+                            LogManager.LogInformation($"Downloading Icon Image for {game.baseGame.Name}");
                             var imageSource = new BitmapImage();
 
                             var Icon = Icons.FirstOrDefault();
@@ -175,8 +208,6 @@ namespace HandheldCompanion.DataAccess
 
                             var result = fileStorage.Upload($"$/iconart/{game.baseGame.Id}.{Icon.Format}", $"{game.baseGame.Name}.{Icon.Format}", ArtStream);
                         }
-
-                        dbGames.Insert(game);
                     }
                 }
 
@@ -217,6 +248,73 @@ namespace HandheldCompanion.DataAccess
                 return null;
             }
 
+        }
+
+        public async Task ClearFilefileStorage()
+        {
+            int CountDeleted = 0;
+            await Task.Run(() => {
+                fileStorage.FindAll().ToList().ForEach(w => {
+                    fileStorage.Delete(w.Id);
+                    if (fileStorage.Delete(w.Id))
+                    {
+                        CountDeleted++;
+                    }
+                });
+            }).ContinueWith((encryptTask) => {
+                LogManager.LogInformation($"Deleted {CountDeleted} Files");
+            });
+        }
+
+        public async Task ClearDatabase()
+        {
+            await Task.Run(() => {
+                var dbGamesDelete = dbGames.DeleteAll();
+                var dbBaseGameDelete = dbBaseGame.DeleteAll();
+                var dbGamesMetaDataDelete = dbGamesMetaData.DeleteAll();
+            }).ContinueWith((encryptTask) => {
+                LogManager.LogInformation($"All Database Entries");
+            });
+        }
+
+        public async Task<bool> FindGameInDatabse(Game game)
+        {
+            try
+            {
+                if (game != null)
+                {
+                    return await Task.Run(() => { 
+                        return dbBaseGame.Exists(f => f.Id == game.baseGameId);
+                    });
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError(ex.Message);
+                return true;
+            }
+        }
+
+        public async Task<bool> ReDownloadMetadata()
+        {
+            try
+            {
+                ClearFilefileStorage();
+                dbGames.Include(i => i.baseGame).FindAll().ToList().ForEach(async f =>
+                {
+                    await DownloadImageData(f);
+                });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError(ex.Message);
+                return true;
+            }
         }
     }
 }

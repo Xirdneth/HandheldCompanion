@@ -1,14 +1,9 @@
-﻿using HandheldCompanion.Controls;
-using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
-using SharpDX.Direct3D9;
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Page = System.Windows.Controls.Page;
 
 namespace HandheldCompanion.Views.QuickPages;
@@ -20,7 +15,6 @@ public partial class QuickHomePage : Page
 {
     private LockObject brightnessLock = new();
     private LockObject volumeLock = new();
-    public Process CurrentProcess;
 
     public QuickHomePage(string Tag) : this()
     {
@@ -33,47 +27,13 @@ public partial class QuickHomePage : Page
         MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
         MultimediaManager.Initialized += SystemManager_Initialized;
 
-
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-
-
-    }
-
-    private void ProcessManager_ForegroundChanged(ProcessEx processEx, ProcessEx backgroundEx)
-    {
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            CurrentProcess = processEx.Process;
-            if (CurrentProcess != null)
-            {
-                string path = ProcessUtils.GetPathToApp(CurrentProcess.Id);
-
-                string exec = Path.GetFileName(path);
-                var ProcessId = CurrentProcess.Id;
-
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                {
-                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(path);
-                    if (icon is not null)
-                    {
-                        ProcessIcon.Source = icon.ToImageSource();
-                    }
-                }
-                TitleTextBlock.Text = path;
-                ExecutableTextBlock.Text = exec;
-            }
-        });
+        ProfileManager.Applied += ProfileManager_Applied;
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
     public QuickHomePage()
     {
-        InitializeComponent();     
-    }
-
-    private void B_KillProcess_Clicked(object sender, RoutedEventArgs e)
-    {
-        if (CurrentProcess is not null)
-            CurrentProcess.Kill();
+        InitializeComponent();
     }
 
     private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
@@ -168,7 +128,41 @@ public partial class QuickHomePage : Page
         MultimediaManager.SetVolume(SliderVolume.Value);
     }
 
-  
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            t_CurrentProfile.Text = profile.ToString();
+        });
+    }
+
+    private void SettingsManager_SettingValueChanged(string name, object value)
+    {
+        string[] onScreenDisplayLevels = {
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
+        };
+
+        switch (name)
+        {
+            case "OnScreenDisplayLevel":
+                {
+                    var overlayLevel = Convert.ToInt16(value);
+
+                    // UI thread (async)
+                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    {
+                        t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+                    });
+                }
+                break;
+        }
+    }
 
     private void UpdateVolumeIcon(float volume)
     {
@@ -193,6 +187,4 @@ public partial class QuickHomePage : Page
 
         VolumeIcon.Glyph = glyph;
     }
-
-
 }

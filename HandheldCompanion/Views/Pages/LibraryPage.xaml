@@ -39,7 +39,65 @@
             <Setter Property="Background" Value="#373737" />
         </Style>
     </Page.Resources>
+
     <ui:SimpleStackPanel Margin="0,20,0,0" Spacing="6">
+        <ui:SimpleStackPanel
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Spacing="0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Button
+                    x:Name="ShowDialog"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Margin="5"
+                    Command="{Binding ShowDialogCommand}"
+                    Content="Import Games"
+                    Style="{DynamicResource AccentButtonStyle}" />
+                <Button
+                    x:Name="DebugDatabaseClear"
+                    Grid.Row="0"
+                    Grid.Column="1"
+                    Margin="5"
+                    Command="{Binding DebugDatabaseClearCommand}"
+                    Content="Clear Database"
+                    Style="{DynamicResource AccentButtonStyle}" />
+                <Button
+                    x:Name="DebugFileStorageClear"
+                    Grid.Row="0"
+                    Grid.Column="2"
+                    Margin="5"
+                    Command="{Binding DebugFileStorageClearCommand}"
+                    Content="Clear FileStorage"
+                    Style="{DynamicResource AccentButtonStyle}" />
+                <Button
+                    x:Name="DebugReDownloadMetadata"
+                    Grid.Row="0"
+                    Grid.Column="3"
+                    Margin="5"
+                    Command="{Binding DebugReDownloadMetadataCommand}"
+                    Content="Re-Download MetaData"
+                    Style="{DynamicResource AccentButtonStyle}" />
+                <Button
+                    x:Name="RefreshGames"
+                    Grid.Row="0"
+                    Grid.Column="4"
+                    Margin="5"
+                    Command="{Binding RefreshGamesCommand}"
+                    Content="Refresh Games List"
+                    Style="{DynamicResource AccentButtonStyle}" />
+            </Grid>
+        </ui:SimpleStackPanel>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -49,29 +107,12 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="400" />
             </Grid.RowDefinitions>
-            <ui:SimpleStackPanel
-                HorizontalAlignment="Right"
-                VerticalAlignment="Stretch"
-                Spacing="0">
-                <Button
-                    x:Name="ShowDialog"
-                    Command="{Binding ShowDialogCommand}"
-                    Content="Import Games"
-                    Style="{DynamicResource AccentButtonStyle}" />
-                <TextBlock
-                    x:Name="DialogResult"
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    Margin="0,0,0,0"
-                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                    Style="{StaticResource BodyTextBlockStyle}"
-                    Text="" />
-            </ui:SimpleStackPanel>
+
             <!--#region Loading gif-->
             <Border
                 Grid.RowSpan="3"
                 Grid.Column="0"
-                Grid.ColumnSpan="2"
+                Grid.ColumnSpan="3"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Panel.ZIndex="1"
@@ -96,8 +137,9 @@
 
             <!--#region No installed games found-->
             <Border
+                Grid.RowSpan="3"
                 Grid.Column="0"
-                Grid.ColumnSpan="2"
+                Grid.ColumnSpan="3"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Panel.ZIndex="1"
@@ -112,6 +154,7 @@
             </Border>
             <!--#endregion-->
 
+            <!--#region Game Info-->
             <Border Grid.Row="1">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -348,6 +391,7 @@
                     </Grid>
                 </Grid>
             </Border>
+            <!--#endregion-->
         </Grid>
     </ui:SimpleStackPanel>
 </Page>

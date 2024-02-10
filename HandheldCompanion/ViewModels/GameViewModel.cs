@@ -10,6 +10,7 @@ using HandheldCompanion.Database;
 using HandheldCompanion.Managers;
 using iNKORE.UI.WPF.Modern.Controls;
 using LiteDB;
+using Microsoft.Extensions.DependencyModel;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,11 +19,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Windows.Security.Isolation;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
 
@@ -30,9 +34,6 @@ namespace HandheldCompanion.ViewModels;
 
 public partial class GameViewModel : ViewModelBase
 {
-    const string CrossImagePath = "/Resources/GameLib/cross-color.png";
-    const string CheckImagePath = "/Resources/GameLib/check-color.png";
-
     [ObservableProperty]
     private ObservableCollection<Game> games = default!;
 
@@ -46,7 +47,7 @@ public partial class GameViewModel : ViewModelBase
     private bool _noGameFound = false;
 
     [ObservableProperty]
-    private string _isRunningLogo = CrossImagePath;
+    private string _isRunningLogo = "";
 
     [ObservableProperty]
     private string? _launcherName;
@@ -61,21 +62,21 @@ public partial class GameViewModel : ViewModelBase
     private async void LoadLocalGames()
     {
         IsLoading = true;
-        var AllGames = Task.Run(async () => await libraryDb.GetAllGames("Steam")).Result;
+        var AllGames = Task.Run(async () => await libraryDb.GetAllGames()).Result;
 
         if (AllGames.Any())
         {
+            
             await Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 Games = new(AllGames);
             });
+            SelectedGame = Games.FirstOrDefault();
         }
         else
         {
-            await Task.Run(async () => await libraryDb.ImportGamesToFromLauncher("Steam"));
-            LoadLocalGames();
+            NoGameFound = true;
         }
-        SelectedGame = Games.FirstOrDefault();
         IsLoading = false;
     }
 
@@ -187,6 +188,31 @@ public partial class GameViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public async Task DebugDatabaseClearAsync()
+    {
+        IsLoading = true;
+        await libraryDb.ClearDatabase();
+        LoadLocalGames();
+    }
+
+    [RelayCommand]
+    public async Task DebugFileStorageClearAsync()
+    {
+        IsLoading = false;
+        await libraryDb.ClearFilefileStorage();
+        LoadLocalGames();
+    }
+
+    [RelayCommand]
+    public async Task DebugReDownloadMetadataAsync()
+    {
+        IsLoading = false;
+        await libraryDb.ReDownloadMetadata();
+        LoadLocalGames();
+    }
+
+
+    [RelayCommand]
     public async Task ShowDialogAsync()
     {
         ContentDialog dialog = new ContentDialog();
@@ -198,13 +224,16 @@ public partial class GameViewModel : ViewModelBase
         var t = new ContentDialogContent();
         t.DataContext = this;
         dialog.Content = t;
-
         await Application.Current.Dispatcher.BeginInvoke(async () =>
         {
             var result = await dialog.ShowAsync();
 
             if (result == ContentDialogResult.Primary)
             {
+                IsLoading = true;
+                NoGameFound = false;
+                await Task.Run(async () => await libraryDb.ImportGamesToFromLauncher(LauncherName));
+                LoadLocalGames();
                 LogManager.LogInformation($"User Imported from {LauncherName}");
             }
             else
@@ -219,6 +248,7 @@ public class Game
 {
     [BsonId]
     public ObjectId Id { get; set; }
+    public string baseGameId { get; set; }
     public ImageSource? heroArt { get; set; }
     public ImageSource? gridArt { get; set; }
     public ImageSource? logoArt { get; set; }

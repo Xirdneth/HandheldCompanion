@@ -17,12 +17,16 @@
             Margin="10"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
-            SelectedItem="{Binding LauncherName}">
+            SelectedValue="{Binding LauncherName}"
+            SelectedValuePath="Content">
 
             <Label Content="Steam" />
-            <Label Content="Epic" />
-            <Label Content="EA" />
-            <Label Content="Blizzard" />
+            <Label Content="Rockstar Games" />
+            <Label Content="Riot Games" />
+            <Label Content="Origin" />
+            <Label Content="GOG Galaxy" />
+            <Label Content="Epic Games" />
+            <Label Content="Battle.net" />
         </ComboBox>
     </StackPanel>
 </UserControl>

@@ -93,32 +93,7 @@
     <None Remove="Resources\ShoulderButtonRight.obj" />
     <None Remove="Resources\xinput1_x64.dll" />
     <None Remove="Views\Pages\overlay_back.webp" />
-	<None Remove="Resources\GameLib\about-black.png" />
-	<None Remove="Resources\GameLib\about-white.png" />
-	<None Remove="Resources\GameLib\check-color.png" />
-	<None Remove="Resources\GameLib\contribute-black.png" />
-	<None Remove="Resources\GameLib\contribute-white.png" />
-	<None Remove="Resources\GameLib\copy-black.png" />
-	<None Remove="Resources\GameLib\copy-white.png" />
-	<None Remove="Resources\GameLib\cross-color.png" />
-	<None Remove="Resources\GameLib\game-black.png" />
-	<None Remove="Resources\GameLib\game-white.png" />
-	<None Remove="Resources\GameLib\GameLibNET-Logo-64px.png" />
-	<None Remove="Resources\GameLib\github-black.png" />
-	<None Remove="Resources\GameLib\github-white.png" />
-	<None Remove="Resources\GameLib\home-black.png" />
-	<None Remove="Resources\GameLib\home-white.png" />
 	<None Remove="Resources\GameLib\icon.ico" />
-	<None Remove="Resources\GameLib\launcher-black.png" />
-	<None Remove="Resources\GameLib\launcher-white.png" />
-	<None Remove="Resources\GameLib\navigation-drawer-black.png" />
-	<None Remove="Resources\GameLib\navigation-drawer-white.png" />
-	<None Remove="Resources\GameLib\open-black.png" />
-	<None Remove="Resources\GameLib\open-white.png" />
-	<None Remove="Resources\GameLib\play-black.png" />
-	<None Remove="Resources\GameLib\play-white.png" />
-	<None Remove="Resources\GameLib\refresh-black.png" />
-	<None Remove="Resources\GameLib\refresh-white.png" />
 	<None Remove="Resources\GameLib\spinner-white.gif" />
   </ItemGroup>
 
@@ -169,31 +144,6 @@
   </ItemGroup>
 
     <ItemGroup>
-	    <Resource Include="Resources\GameLib\about-black.png" />
-	    <Resource Include="Resources\GameLib\about-white.png" />
-	    <Resource Include="Resources\GameLib\check-color.png" />
-	    <Resource Include="Resources\GameLib\contribute-black.png" />
-	    <Resource Include="Resources\GameLib\contribute-white.png" />
-	    <Resource Include="Resources\GameLib\copy-black.png" />
-	    <Resource Include="Resources\GameLib\copy-white.png" />
-	    <Resource Include="Resources\GameLib\cross-color.png" />
-	    <Resource Include="Resources\GameLib\game-black.png" />
-	    <Resource Include="Resources\GameLib\game-white.png" />
-	    <Resource Include="Resources\GameLib\GameLibNET-Logo-64px.png" />
-	    <Resource Include="Resources\GameLib\github-black.png" />
-	    <Resource Include="Resources\GameLib\github-white.png" />
-	    <Resource Include="Resources\GameLib\home-black.png" />
-	    <Resource Include="Resources\GameLib\home-white.png" />
-	    <Resource Include="Resources\GameLib\launcher-black.png" />
-	    <Resource Include="Resources\GameLib\launcher-white.png" />
-	    <Resource Include="Resources\GameLib\navigation-drawer-black.png" />
-	    <Resource Include="Resources\GameLib\navigation-drawer-white.png" />
-	    <Resource Include="Resources\GameLib\open-black.png" />
-	    <Resource Include="Resources\GameLib\open-white.png" />
-	    <Resource Include="Resources\GameLib\play-black.png" />
-	    <Resource Include="Resources\GameLib\play-white.png" />
-	    <Resource Include="Resources\GameLib\refresh-black.png" />
-	    <Resource Include="Resources\GameLib\refresh-white.png" />
 	    <Resource Include="Resources\GameLib\spinner-white.gif" />
     </ItemGroup>
 	
