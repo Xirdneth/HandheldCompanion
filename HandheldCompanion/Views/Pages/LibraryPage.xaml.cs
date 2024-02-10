@@ -5,6 +5,10 @@ using GameLib;
 using HandheldCompanion.ViewModels;
 using GameLib.Core;
 using HandheldCompanion.Database;
+using iNKORE.UI.WPF.Modern.Helpers;
+using iNKORE.UI.WPF.Modern.Controls;
+using System.Windows.Forms;
+using HandheldCompanion.Controls;
 
 namespace HandheldCompanion.Views.Pages
 {
@@ -42,5 +46,7 @@ namespace HandheldCompanion.Views.Pages
         private void Page_LayoutUpdated(object sender, EventArgs e)
         {
         }
+
+        
     }
 }

@@ -4,7 +4,11 @@ using craftersmine.SteamGridDBNet;
 using GameLib;
 using GameLib.Core;
 using GameLib.Plugin.RiotGames.Model;
+using HandheldCompanion.Controls;
+using HandheldCompanion.DataAccess;
 using HandheldCompanion.Database;
+using HandheldCompanion.Managers;
+using iNKORE.UI.WPF.Modern.Controls;
 using LiteDB;
 using System;
 using System.Collections.Generic;
@@ -16,8 +20,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Application = System.Windows.Application;
+using Clipboard = System.Windows.Clipboard;
 
 namespace HandheldCompanion.ViewModels;
 
@@ -26,10 +33,8 @@ public partial class GameViewModel : ViewModelBase
     const string CrossImagePath = "/Resources/GameLib/cross-color.png";
     const string CheckImagePath = "/Resources/GameLib/check-color.png";
 
-    private readonly LauncherManager _launcherManager;
-    private readonly LiteDbContext db;
     [ObservableProperty]
-    private ObservableCollection<Game> _games = default!;
+    private ObservableCollection<Game> games = default!;
 
     [ObservableProperty]
     private Game? _selectedGame;
@@ -46,239 +51,37 @@ public partial class GameViewModel : ViewModelBase
     [ObservableProperty]
     private string? _launcherName;
 
-    private ILiteCollection<Game>? dbGames;
-    private ILiteCollection<IGame>? dbBaseGame;
-    private ILiteCollection<SteamGridDbGame>? dbGamesMetaData;
-
-
-    private static SteamGridDb? steamGridDb { get; set; }
+    private LibraryDbManager? libraryDb;
 
     public GameViewModel(LauncherManager launcherManager, LiteDbContext db)
     {
-        _launcherManager = launcherManager;
-        this.db = db;
-        steamGridDb = new SteamGridDb("3211a8c119e2d7e013e69e80d9bc460a");
+        libraryDb = new LibraryDbManager(db.Context, launcherManager);
+        LoadLocalGames();
+    }
+    private async void LoadLocalGames()
+    {
+        IsLoading = true;
+        var AllGames = Task.Run(async () => await libraryDb.GetAllGames("Steam")).Result;
 
-        var mapper = BsonMapper.Global;
-
-        mapper.Entity<Game>()
-            .Id(x => x.Id)
-            .Ignore(x => x.coverArt)
-            .Field(x => x.metaData, "metaData")
-            .Field(x => x.baseGame, "baseGame");
-
-        //BsonMapper.Global.Entity<Game>()
-        //    .Id(oid => oid.Id)
-        //    .DbRef(x => x.baseGame, "baseGame")
-        //    .DbRef(x => x.metaData, "metaData");
-
-        //BsonMapper.Global.Entity<IGame>()
-        //    .Id(oid => oid.Id);
-        //BsonMapper.Global.Entity<SteamGridDbGame>()
-        //    .Id(oid => oid.Id);
-
-        BsonMapper.Global.ResolveMember = (type, memberInfo, memberMapper) =>
+        if (AllGames.Any())
         {
-            if (memberMapper.DataType.IsEnum)
+            await Application.Current.Dispatcher.BeginInvoke(() =>
             {
-                memberMapper.Serialize = (obj, mapper) => new BsonValue((int)obj);
-                memberMapper.Deserialize = (value, mapper) => Enum.ToObject(memberMapper.DataType, value);
-            }
-        };
-
-        //dbGamesMetaData = db.Context.GetCollection<SteamGridDbGame>("metaData");
-        //dbBaseGame = db.Context.GetCollection<IGame>("baseGame");
-        dbGames = db.Context.GetCollection<Game>("Games");
-
-
-        if (dbGames.Count() == 0)
-        {
-            Task.Run(async () => await ImportGames("Steam"));
+                Games = new(AllGames);
+            });
         }
         else
         {
-            Task.Run(async () => await LoadGamesfromDb());
+            await Task.Run(async () => await libraryDb.ImportGamesToFromLauncher("Steam"));
+            LoadLocalGames();
         }
-    }
-
-    private async Task ImportGames(string launcherName)
-    {
-        IsLoading = true;
-        IEnumerable<Game> games = Enumerable.Empty<Game>();
-
-        await Task.Run(async () =>
-        {
-            try
-            {
-                var InstalledGames = _launcherManager.GetLaunchers().Where((ILauncher launcher) => launcher.Name == launcherName).FirstOrDefault();
-                if(InstalledGames != null)
-                {
-                    games = InstalledGames.Games.Select(x => new Game()
-                    {
-                        baseGame = x,
-                    });
-
-                    if (games.Any())
-                    {
-                        await DownloadMetaData(games);                    
-                    }
-                }
-            }
-            catch { /* ignore */ }
-        });
-        
-        
-    }
-    private async Task LoadGamesfromDb()
-    {
-        IsLoading = true;
-
-        await Task.Run(async () =>
-        {
-            try
-            {
-                var InstalledGames = dbGames.FindAll().ToList();
-                if (InstalledGames.Any())
-                {
-                    await LoadGameMetaData(InstalledGames);
-                }
-            }
-            catch { /* ignore */ }
-        });
-
-
-    }
-    public async Task LoadGameMetaData(IEnumerable<Game> games)
-    {
-        try
-        {
-            if (games.Any())
-            {
-                Games = new();
-                var fs = db.Context.GetStorage<string>("myFiles", "myChunks");
-                foreach (var game in games)
-                {
-                    var files1 = fs.FindAll().ToList();
-                    //var files = files1[3];
-                    //var files = fs.Find($"$/coverart/{game.metaData.Id}.Png");
-                    Stream Stream = new MemoryStream();
-                    files1.FirstOrDefault().CopyTo(Stream);
-                    game.coverArt = BitmapFrame.Create(Stream,
-                                                        BitmapCreateOptions.None,
-                                                        BitmapCacheOption.OnLoad);
-                    await Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        Games.Add(game);
-
-                    });
-                }
-               
-                SelectedGame = Games.FirstOrDefault();
-            }
-            else
-            {
-                NoGameFound = true;
-            }
-
-            IsLoading = false;
-        }
-        catch (Exception)
-        {
-            IsLoading = false;
-            NoGameFound = true;
-        }
-
-    }
-    public async Task DownloadMetaData(IEnumerable<Game> games)
-    {
-        try
-        {
-            if (games.Any())
-            {
-                Games = new();
-                var fs = db.Context.GetStorage<string>("myFiles", "myChunks");
-                foreach (var game in games)
-                {
-                    SteamGridDbGame[]? gameSearch = await steamGridDb.SearchForGamesAsync(game.baseGame.Name);
-
-                    if (gameSearch.Any())
-                    {
-                        var GameMetaData = gameSearch.Where(w => w.Name == game.baseGame.Name).FirstOrDefault();
-
-                        game.metaData = GameMetaData;
-                        SteamGridDbGame? gameById = await steamGridDb.GetGameByIdAsync(GameMetaData.Id);
-                        SteamGridDbLogo[]? Logo = await steamGridDb.GetLogosByGameIdAsync(GameMetaData.Id);
-
-                        if (Logo.Any())
-                        {
-                            var logo = Logo.FirstOrDefault();
-                            using Stream LogoStream = await logo.GetImageAsStreamAsync(false);
-
-                            game.coverArt = BitmapFrame.Create(LogoStream,
-                                                                  BitmapCreateOptions.None,
-                                                                  BitmapCacheOption.OnLoad);
-                            fs.Upload($"$/coverart/{game.baseGame.Id}.{logo.Format}", $"{game.baseGame.Name}.{logo.Format}", LogoStream);
-                        }
-                        else
-                        {
-                            SteamGridDbIcon[]? Icon = await steamGridDb.GetIconsByGameIdAsync(GameMetaData.Id);
-                            if (Icon.Any())
-                            {
-                                var icon = Icon.FirstOrDefault();
-                                using Stream IconStream = await icon.GetImageAsStreamAsync(false);
-
-                                game.coverArt = BitmapFrame.Create(IconStream,
-                                                                      BitmapCreateOptions.None,
-                                                                      BitmapCacheOption.OnLoad);
-    
-                                fs.Upload($"$/coverart/{game.baseGame.Id}.{icon.Format}", $"{game.baseGame.Name}.{icon.Format}", IconStream);
-                            }
-                        }
-
-
-                    }
-                    //var doc = BsonMapper.Global.ToDocument(game.baseGame);
-                    dbGames.Insert(game);
-                    //dbBaseGame.Insert(game.baseGame);
-                    //dbGamesMetaData.Insert(game.metaData);
-                    await Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        Games.Add(game);
-
-                    });
-                }
-                SelectedGame = Games.FirstOrDefault();
-            }
-            else
-            {
-                NoGameFound = true;
-            }
-
-            IsLoading = false;
-        }
-        catch (Exception)
-        {
-            IsLoading = false;
-            NoGameFound = true;
-        }
+        SelectedGame = Games.FirstOrDefault();
+        IsLoading = false;
     }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.PropertyName.Equals("SelectedGame"))
-        {
-            if(SelectedGame != null)
-            {
-                LauncherName = _launcherManager.GetLaunchers().First(l => l.Id == SelectedGame.baseGame.LauncherId).Name;
-                IsRunningLogo = SelectedGame.baseGame.IsRunning ? CheckImagePath : CrossImagePath;
-            }
-            else
-            {
-                LauncherName = string.Empty;
-                IsRunningLogo = CrossImagePath;
-            }
-        }
     }
 
     [RelayCommand]
@@ -309,7 +112,7 @@ public partial class GameViewModel : ViewModelBase
                 FileName = game.baseGame.Executables.FirstOrDefault(),
                 WorkingDirectory = game.baseGame.WorkingDir
             });
-            
+
         }
         catch { /* ignore */ }
     }
@@ -380,19 +183,48 @@ public partial class GameViewModel : ViewModelBase
     public void RefreshGames()
     {
         NoGameFound = false;
-        Task.Run(async () => await LoadGamesfromDb());
+        LoadLocalGames();
     }
 
-    
+    [RelayCommand]
+    public async Task ShowDialogAsync()
+    {
+        ContentDialog dialog = new ContentDialog();
+        dialog.Title = "Import Titles?";
+        dialog.PrimaryButtonText = "Import";
+        //dialog.SecondaryButtonText = "Don't Save";
+        dialog.CloseButtonText = "Cancel";
+        dialog.DefaultButton = ContentDialogButton.Primary;
+        var t = new ContentDialogContent();
+        t.DataContext = this;
+        dialog.Content = t;
+
+        await Application.Current.Dispatcher.BeginInvoke(async () =>
+        {
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                LogManager.LogInformation($"User Imported from {LauncherName}");
+            }
+            else
+            {
+                LogManager.LogInformation("User cancelled the dialog");
+            }
+        });
+    }
 }
 
 public class Game
 {
     [BsonId]
     public ObjectId Id { get; set; }
-    public ImageSource? coverArt { get; set; }
-    //[BsonRef("metaData")]
+    public ImageSource? heroArt { get; set; }
+    public ImageSource? gridArt { get; set; }
+    public ImageSource? logoArt { get; set; }
+    public ImageSource? iconArt { get; set; }
+    [BsonRef("metaData")]
     public SteamGridDbGame? metaData { get; set; }
-    //[BsonRef("baseGame")]
+    [BsonRef("baseGame")]
     public required IGame baseGame { get; set; }
 }

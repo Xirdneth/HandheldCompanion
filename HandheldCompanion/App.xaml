@@ -74,7 +74,7 @@
             <Style BasedOn="{StaticResource {x:Static ui:ThemeKeys.ExpanderCardStyleKey}}" TargetType="Expander">
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
             </Style>
-            
+
             <SolidColorBrush x:Key="NavigationBarBackgroundColor" Color="#0D47A1" />
             <SolidColorBrush x:Key="NavigationBarSelectedItemBackgroundColor" Color="#3162AF" />
             <SolidColorBrush x:Key="NavigationBarForegroundColor" Color="#FFFFFF" />
@@ -87,7 +87,7 @@
 
             <SolidColorBrush x:Key="ThirdBackgroundColor" Color="#444444" />
             <SolidColorBrush x:Key="ThirdForegroundColor" Color="#bae0ff" />
-            
+
         </ResourceDictionary>
 
     </Application.Resources>

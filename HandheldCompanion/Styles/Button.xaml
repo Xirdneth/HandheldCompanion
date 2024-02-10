@@ -6,20 +6,23 @@
     xmlns:primitives="http://schemas.inkore.net/lib/ui/wpf/modern"
     xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern">
     <Style x:Key="menuButtonStyle" TargetType="Button">
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="Margin" Value="5 0 0 0"/>
-        <Setter Property="Height" Value="45"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Tag" Value="#6673b7"/>
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Margin" Value="5,0,0,0" />
+        <Setter Property="Height" Value="45" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Tag" Value="#6673b7" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}" BorderThickness="4 0 0 0" BorderBrush="Transparent">
-                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="Transparent"
+                        BorderThickness="4,0,0,0">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -27,20 +30,23 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
 
-                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Foreground" Value="White" />
                 <Setter Property="Background">
                     <Setter.Value>
                         <LinearGradientBrush StartPoint="0, 0.5" EndPoint="1, 0.5">
-                            <GradientStop Color="#31407b" Offset="0"/>
-                            <GradientStop Color="#495385" Offset="3"/>
+                            <GradientStop Offset="0" Color="#31407b" />
+                            <GradientStop Offset="3" Color="#495385" />
                         </LinearGradientBrush>
                     </Setter.Value>
                 </Setter>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}" BorderThickness="4 0 0 0" BorderBrush="#a5a1f5">
-                                <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                            <Border
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#a5a1f5"
+                                BorderThickness="4,0,0,0">
+                                <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                             </Border>
                         </ControlTemplate>
                     </Setter.Value>
@@ -52,14 +58,20 @@
                 <Trigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)" To="#444444" Duration="0:0:1"/>
+                            <ColorAnimation
+                                Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                To="#444444"
+                                Duration="0:0:1" />
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>
                 <Trigger.ExitActions>
                     <BeginStoryboard>
                         <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)" To="Transparent" Duration="0:0:1"/>
+                            <ColorAnimation
+                                Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                To="Transparent"
+                                Duration="0:0:1" />
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.ExitActions>
