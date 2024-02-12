@@ -15,13 +15,24 @@ namespace HandheldCompanion.Controls;
 /// </summary>
 public partial class GyroMapping : IMapping
 {
-    private Hotkey GyroHotkey = new(60);
+    private Hotkey GyroHotkey { get; set; }
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    public GyroMapping()
+    public GyroMapping(
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
-
-
+        this.hotkeysManager = hotkeysManager;
+        this.controllerManager = controllerManager;
+        this.inputsManager = inputsManager;
+        this.timerManager = timerManager;
+        GyroHotkey = new(60,hotkeysManager,controllerManager,inputsManager);
         // draw input modes
         foreach (var mode in (MotionInput[])Enum.GetValues(typeof(MotionInput)))
         {
@@ -60,11 +71,16 @@ public partial class GyroMapping : IMapping
             cB_Input.Items.Add(panel);
         }
 
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
+        hotkeysManager.Value.HotkeyCreated += TriggerCreated;
+        inputsManager.Value.TriggerUpdated += TriggerUpdated;
+
     }
 
-    public GyroMapping(AxisLayoutFlags axis) : this()
+    public GyroMapping(AxisLayoutFlags axis,
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<ITimerManager> timerManager) : this(hotkeysManager, controllerManager, inputsManager, timerManager)
     {
         Value = axis;
 
@@ -117,7 +133,7 @@ public partial class GyroMapping : IMapping
         TargetComboBox.IsEnabled = ActionComboBox.SelectedIndex != 0;
 
         // get current controller
-        var controller = ControllerManager.GetEmulatedController();
+        var controller = controllerManager.Value.GetEmulatedController();
 
         // populate target dropdown based on action type
         ActionType type = (ActionType)ActionComboBox.SelectedIndex;
@@ -134,7 +150,7 @@ public partial class GyroMapping : IMapping
             if (Actions is null || Actions is not AxisActions)
             {
                 // default values
-                Actions = new AxisActions()
+                Actions = new AxisActions(controllerManager,timerManager)
                 {
                     Axis = GyroActions.DefaultAxisLayoutFlags,
                     AxisAntiDeadZone = GyroActions.DefaultAxisAntiDeadZone,
@@ -173,7 +189,7 @@ public partial class GyroMapping : IMapping
         {
             if (Actions is null || Actions is not MouseActions)
             {
-                Actions = new MouseActions()
+                Actions = new MouseActions(controllerManager, timerManager)
                 {
                     MouseType = GyroActions.DefaultMouseActionsType,
                     Sensivity = GyroActions.DefaultSensivity,

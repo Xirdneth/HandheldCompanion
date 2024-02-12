@@ -27,34 +27,91 @@ public partial class QuickProfilesPage : Page
 {
     private const int UpdateInterval = 500;
     private readonly Timer UpdateTimer;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IGPUManager> gPUManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
+    private readonly Lazy<ITimerManager> timerManager;
     private ProcessEx currentProcess;
     private Profile selectedProfile;
 
     private LockObject updateLock = new();
 
-    private Hotkey GyroHotkey = new(61);
+    private Hotkey GyroHotkey { get; set; }
     private Profile realProfile;
 
-    public QuickProfilesPage(string Tag) : this()
+    public QuickProfilesPage(string Tag,
+        Lazy<IProfileManager> profileManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPerformanceManager> performanceManager, 
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IProcessManager> processManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : 
+        this(profileManager, 
+            powerProfileManager, 
+            platformManager, 
+            gPUManager, 
+            performanceManager, 
+            multimediaManager, 
+            hotkeysManager,
+            inputsManager,
+            processManager,
+            controllerManager,
+            timerManager)
     {
         this.Tag = Tag;
     }
 
-    public QuickProfilesPage()
+    public QuickProfilesPage(
+        Lazy<IProfileManager> profileManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IProcessManager> processManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
 
+        this.profileManager = profileManager;
+        this.powerProfileManager = powerProfileManager;
+        this.platformManager = platformManager;
+        this.gPUManager = gPUManager;
+        this.performanceManager = performanceManager;
+        this.multimediaManager = multimediaManager;
+        this.hotkeysManager = hotkeysManager;
+        this.inputsManager = inputsManager;
+        this.processManager = processManager;
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
+
         // manage events
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        PowerProfileManager.Updated += PowerProfileManager_Updated;
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
-        PlatformManager.RTSS.Updated += RTSS_Updated;
-        GPUManager.Initialized += GPUManager_Initialized;
+        processManager.Value.ForegroundChanged += ProcessManager_ForegroundChanged;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        powerProfileManager.Value.Updated += PowerProfileManager_Updated;
+        powerProfileManager.Value.Deleted += PowerProfileManager_Deleted;
+        multimediaManager.Value.Initialized += MultimediaManager_Initialized;
+        multimediaManager.Value.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+        hotkeysManager.Value.HotkeyCreated += TriggerCreated;
+        inputsManager.Value.TriggerUpdated += TriggerUpdated;
+        platformManager.Value.RTSS.Updated += RTSS_Updated;
+        gPUManager.Value.Initialized += GPUManager_Initialized;
 
         foreach (var mode in (MotionOuput[])Enum.GetValues(typeof(MotionOuput)))
         {
@@ -161,7 +218,8 @@ public partial class QuickProfilesPage : Page
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // force call
-        RTSS_Updated(PlatformManager.RTSS.Status);
+        RTSS_Updated(platformManager.Value.RTSS.Status);
+        GyroHotkey = new(61,hotkeysManager,controllerManager,inputsManager);
     }
 
     private void MultimediaManager_Initialized()
@@ -169,7 +227,7 @@ public partial class QuickProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+            DesktopScreen desktopScreen = multimediaManager.Value.GetDesktopScreen();
             desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
         });
     }
@@ -253,7 +311,7 @@ public partial class QuickProfilesPage : Page
             switch (status)
             {
                 case PlatformStatus.Ready:
-                    var Processor = PerformanceManager.GetProcessor();
+                    var Processor = performanceManager.Value.GetProcessor();
                     StackProfileFramerate.IsEnabled = true;
                     break;
                 case PlatformStatus.Stalled:
@@ -285,7 +343,7 @@ public partial class QuickProfilesPage : Page
         if (selectedProfile is null)
             return;
 
-        ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
+        profileManager.Value.UpdateOrCreateProfile(selectedProfile, source);
     }
 
     private void PowerProfileManager_Deleted(PowerProfile powerProfile)
@@ -453,8 +511,8 @@ public partial class QuickProfilesPage : Page
                 }
                 else
                 {
-                    Profile mainProfile = ProfileManager.GetProfileForSubProfile(selectedProfile);
-                    Profile[] subProfiles = ProfileManager.GetSubProfilesFromPath(selectedProfile.Path, false);
+                    Profile mainProfile = profileManager.Value.GetProfileForSubProfile(selectedProfile);
+                    Profile[] subProfiles = profileManager.Value.GetSubProfilesFromPath(selectedProfile.Path, false);
 
                     cb_SubProfiles.Items.Add(mainProfile);
                     foreach (Profile subProfile in subProfiles)
@@ -469,7 +527,7 @@ public partial class QuickProfilesPage : Page
                 cb_SubProfiles.SelectedIndex = selectedIndex;
 
                 // power profile
-                PowerProfile powerProfile = PowerProfileManager.GetProfile(profile.PowerProfile);
+                PowerProfile powerProfile = powerProfileManager.Value.GetProfile(profile.PowerProfile);
                 powerProfile.Check(this);
 
                 // gyro layout
@@ -509,7 +567,7 @@ public partial class QuickProfilesPage : Page
                 }
 
                 // Framerate limit
-                desktopScreen = MultimediaManager.GetDesktopScreen();
+                desktopScreen = multimediaManager.Value.GetDesktopScreen();
                 if (desktopScreen is not null)
                     cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
 
@@ -541,7 +599,7 @@ public partial class QuickProfilesPage : Page
         currentProcess = processEx;
 
         // update real profile
-        realProfile = ProfileManager.GetProfileFromPath(processEx.Path, true);
+        realProfile = profileManager.Value.GetProfileFromPath(processEx.Path, true);
 
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
@@ -582,7 +640,7 @@ public partial class QuickProfilesPage : Page
     private void ProfileToggle_Toggled(object sender, RoutedEventArgs e)
     {
         // update real profile
-        realProfile = ProfileManager.GetProfileFromPath(realProfile.Path, true);
+        realProfile = profileManager.Value.GetProfileFromPath(realProfile.Path, true);
         if (realProfile is null)
             return;
 
@@ -596,7 +654,7 @@ public partial class QuickProfilesPage : Page
         else
         {
             realProfile.Enabled = ProfileToggle.IsOn;
-            ProfileManager.UpdateOrCreateProfile(realProfile, UpdateSource.QuickProfilesCreation);
+            profileManager.Value.UpdateOrCreateProfile(realProfile, UpdateSource.QuickProfilesCreation);
         }
     }
 
@@ -606,8 +664,8 @@ public partial class QuickProfilesPage : Page
             return;
 
         // create profile
-        selectedProfile = new Profile(currentProcess.Path);
-        selectedProfile.Layout = (ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout;
+        selectedProfile = new Profile(currentProcess.Path,profileManager);
+        selectedProfile.Layout = (profileManager.Value.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout;
         selectedProfile.LayoutTitle = LayoutTemplate.DesktopLayout.Name;
 
         // if an update is pending, execute it and stop timer
@@ -662,7 +720,7 @@ public partial class QuickProfilesPage : Page
                 {
                     if (gyroActions is null || gyroActions is not AxisActions)
                     {
-                        gyroActions = new AxisActions()
+                        gyroActions = new AxisActions(controllerManager, timerManager)
                         {
                             AxisAntiDeadZone = GyroActions.DefaultAxisAntiDeadZone
                         };
@@ -678,7 +736,7 @@ public partial class QuickProfilesPage : Page
                 {
                     if (gyroActions is null || gyroActions is not MouseActions)
                     {
-                        gyroActions = new MouseActions()
+                        gyroActions = new MouseActions(controllerManager,timerManager)
                         {
                             MouseType = GyroActions.DefaultMouseActionsType,
                             Sensivity = GyroActions.DefaultSensivity,
@@ -882,12 +940,12 @@ public partial class QuickProfilesPage : Page
 
     private void Button_PowerSettings_Create_Click(object sender, RoutedEventArgs e)
     {
-        int idx = PowerProfileManager.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
+        int idx = powerProfileManager.Value.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
 
         string Name = string.Format(Properties.Resources.PowerProfileManualName, idx);
         PowerProfile powerProfile = new PowerProfile(Name, Properties.Resources.PowerProfileManualDescription);
 
-        PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
+        powerProfileManager.Value.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
     }
 
     private void IntegerScalingToggle_Toggled(object sender, RoutedEventArgs e)

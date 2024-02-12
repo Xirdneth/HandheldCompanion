@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using System;
 using System.Windows;
 using static JSL;
 
@@ -8,11 +9,20 @@ namespace HandheldCompanion.Controllers;
 
 public class DualSenseController : JSController
 {
-    public DualSenseController()
+    private readonly Lazy<ITimerManager> timerManager;
+
+    public DualSenseController(
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<ITimerManager> timerManager) : base(settingsManager, controllerManager)
     {
+        this.timerManager = timerManager;
     }
 
-    public DualSenseController(JOY_SETTINGS settings, PnPDetails details) : base(settings, details)
+    public DualSenseController(JOY_SETTINGS settings, PnPDetails details,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<ITimerManager> timerManager) : base(settings, details, settingsManager, controllerManager)
     {
         // Additional controller specific source buttons
         SourceButtons.Add(ButtonFlags.LeftPadClick);
@@ -30,6 +40,7 @@ public class DualSenseController : JSController
 
         TargetAxis.Add(AxisLayoutFlags.LeftPad);
         TargetAxis.Add(AxisLayoutFlags.RightPad);
+        this.timerManager = timerManager;
     }
 
     public override void UpdateInputs(long ticks)
@@ -86,13 +97,13 @@ public class DualSenseController : JSController
 
     public override void Plug()
     {
-        TimerManager.Tick += UpdateInputs;
+        timerManager.Value.Tick += UpdateInputs;
         base.Plug();
     }
 
     public override void Unplug()
     {
-        TimerManager.Tick -= UpdateInputs;
+        timerManager.Value.Tick -= UpdateInputs;
         base.Unplug();
     }
 

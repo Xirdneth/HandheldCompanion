@@ -57,48 +57,70 @@ public class XInputPlusLoaderSetting
     [MarshalAs(UnmanagedType.U1)] public bool Launched;
 }
 
-public static class XInputPlus
+public class XInputPlus : IXInputPlus
 {
     // todo: move me
     [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWow64Process([In] IntPtr process, [Out] out bool wow64Process);
 
-    private static readonly Dictionary<bool, uint> CRCs = new()
+    private readonly Dictionary<bool, uint> CRCs = new()
     {
         { false, 0xcd4906cc },
         { true, 0x1e9df650 }
     };
 
     // XInputPlus main directory
-    private static readonly string XInputPlusDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "XInputPlus");
+    private readonly string XInputPlusDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "XInputPlus");
 
     // XInputPlus Loader (injector)
-    private static readonly string XInputPlus_InjectorDir = Path.Combine(XInputPlusDir, "Loader");
-    private static readonly string XInputPlus_Injectorx86 = Path.Combine(XInputPlus_InjectorDir, "XInputPlusInjector.dll");
-    private static readonly string XInputPlus_Injectorx64 = Path.Combine(XInputPlus_InjectorDir, "XInputPlusInjector64.dll");
+    private string XInputPlus_InjectorDir { get; set; }
+    private string XInputPlus_Injectorx86 { get; set; }
+    private string XInputPlus_Injectorx64 { get; set; }
 
     // XInputPlus XInput/DInput x86
-    private static readonly string XInputPlus_x86Dir = Path.Combine(XInputPlusDir, "x86");
-    private static readonly string XInputPlus_XInputx86 = Path.Combine(XInputPlus_x86Dir, "xinput1_3.dl_");
-    private static readonly string XInputPlus_DInputx86 = Path.Combine(XInputPlus_x86Dir, "dinput.dl_");
-    private static readonly string XInputPlus_DInput8x86 = Path.Combine(XInputPlus_x86Dir, "dinput8.dl_");
+    private string XInputPlus_x86Dir { get; set; }
+    private string XInputPlus_XInputx86 { get; set; }
+    private string XInputPlus_DInputx86 { get; set; }
+    private string XInputPlus_DInput8x86 { get; set; }
 
     // XInputPlus XInput/Dinput x64
-    private static readonly string XInputPlus_x64Dir = Path.Combine(XInputPlusDir, "x64");
-    private static readonly string XInputPlus_XInputx64 = Path.Combine(XInputPlus_x64Dir, "xinput1_3.dl_");
-    private static readonly string XInputPlus_DInputx64 = Path.Combine(XInputPlus_x64Dir, "dinput.dl_");
-    private static readonly string XInputPlus_DInput8x64 = Path.Combine(XInputPlus_x64Dir, "dinput8.dl_");
+    private string XInputPlus_x64Dir { get; set; }
+    private string XInputPlus_XInputx64 { get; set; }
+    private string XInputPlus_DInputx64 { get; set; }
+    private string XInputPlus_DInput8x64 { get; set; }
 
-    private static readonly string IniContent = Resources.XInputPlus;
+    private string IniContent = Resources.XInputPlus;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<IControllerManager> controllerManager;
 
-    static XInputPlus()
+    public XInputPlus(Lazy<IProfileManager> profileManager, Lazy<IProcessManager> processManager, Lazy<IControllerManager> controllerManager)
     {
-        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
+        this.profileManager = profileManager;
+        this.processManager = processManager;
+        this.controllerManager = controllerManager;
+
+        processManager.Value.ProcessStarted += ProcessManager_ProcessStarted;
+        XInputPlus_InjectorDir = Path.Combine(XInputPlusDir, "Loader");
+        XInputPlus_Injectorx86 = Path.Combine(XInputPlus_InjectorDir, "XInputPlusInjector.dll");
+        XInputPlus_Injectorx64 = Path.Combine(XInputPlus_InjectorDir, "XInputPlusInjector64.dll");
+
+        // XInputPlus XInput/DInput x86
+        XInputPlus_x86Dir = Path.Combine(XInputPlusDir, "x86");
+        XInputPlus_XInputx86 = Path.Combine(XInputPlus_x86Dir, "xinput1_3.dl_");
+        XInputPlus_DInputx86 = Path.Combine(XInputPlus_x86Dir, "dinput.dl_");
+        XInputPlus_DInput8x86 = Path.Combine(XInputPlus_x86Dir, "dinput8.dl_");
+
+        // XInputPlus XInput/Dinput x64
+        XInputPlus_x64Dir = Path.Combine(XInputPlusDir, "x64");
+        XInputPlus_XInputx64 = Path.Combine(XInputPlus_x64Dir, "xinput1_3.dl_");
+        XInputPlus_DInputx64 = Path.Combine(XInputPlus_x64Dir, "dinput.dl_");
+        XInputPlus_DInput8x64 = Path.Combine(XInputPlus_x64Dir, "dinput8.dl_");
     }
 
     // this should be handled by the installer at some point.
-    public static void ExtractXInputPlusLibraries()
+    public void ExtractXInputPlusLibraries()
     {
         if (!Directory.Exists(XInputPlusDir))
             Directory.CreateDirectory(XInputPlusDir);
@@ -127,18 +149,18 @@ public static class XInputPlus
         // todo: add support for xinputplus dinput libraries
     }
 
-    private static async void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
+    private async void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
     {
         try
         {
             // get related profile
-            Profile profile = ProfileManager.GetProfileFromPath(processEx.Path, true);
+            Profile profile = profileManager.Value.GetProfileFromPath(processEx.Path, true);
 
             if (profile.XInputPlus != XInputPlusMethod.Injection)
                 return;
 
             int attempt = 0;
-            while (!ProcessManager.CheckXInput(processEx.Process))
+            while (!processManager.Value.CheckXInput(processEx.Process))
             {
                 attempt++;
 
@@ -158,7 +180,7 @@ public static class XInputPlus
         }
     }
 
-    public static void InjectXInputPlus(Process targetProcess, bool x64bit)
+    public void InjectXInputPlus(Process targetProcess, bool x64bit)
     {
         XInputPlusLoaderSetting setting = new XInputPlusLoaderSetting();
 
@@ -171,7 +193,7 @@ public static class XInputPlus
         setting.DInputDLL64 = XInputPlus_DInputx64;                         // unused
         setting.DInput8DLL64 = XInputPlus_DInput8x64;                       // unused
         setting.TargetProgram = "";                                         // Internal use
-        setting.LoaderDir = XInputPlus_InjectorDir;                         // "XInputPlus.ini" in this folder is used
+        setting.LoaderDir = XInputPlus_InjectorDir;                         // "xInputPlus.Value.ini" in this folder is used
         setting.HookChildProcess = false;
         setting.Launched = false;                                           // Internal use
 
@@ -205,7 +227,7 @@ public static class XInputPlus
         }
     }
 
-    private static bool CheckDeployment(string DirectoryPath)
+    private bool CheckDeployment(string DirectoryPath)
     {
         for (var i = 0; i < 5; i++)
         {
@@ -225,7 +247,7 @@ public static class XInputPlus
         return true;
     }
 
-    public static bool RegisterApplication(Profile profile)
+    public bool RegisterApplication(Profile profile)
     {
         string DirectoryPath = Path.GetDirectoryName(profile.Path);
 
@@ -299,7 +321,7 @@ public static class XInputPlus
         }
     }
 
-    public static bool UnregisterApplication(Profile profile)
+    public bool UnregisterApplication(Profile profile)
     {
         string DirectoryPath = Path.GetDirectoryName(profile.Path);
 
@@ -341,7 +363,7 @@ public static class XInputPlus
             }
 
             // remove XInputPlus INI file
-            string IniPath = Path.Combine(DirectoryPath, "XInputPlus.ini");
+            string IniPath = Path.Combine(DirectoryPath, "xInputPlus.Value.ini");
             FileUtils.FileDelete(IniPath);
         }
         catch
@@ -352,12 +374,12 @@ public static class XInputPlus
         return true;
     }
 
-    private static object writeLock = new();
-    public static bool WriteXInputPlusINI(string directoryPath, bool x64bit)
+    private object writeLock = new();
+    public bool WriteXInputPlusINI(string directoryPath, bool x64bit)
     {
         lock (writeLock)
         {
-            string IniPath = Path.Combine(directoryPath, "XInputPlus.ini");
+            string IniPath = Path.Combine(directoryPath, "xInputPlus.Value.ini");
 
             if (!FileUtils.IsFileWritable(IniPath))
                 return false;
@@ -377,7 +399,7 @@ public static class XInputPlus
                     IniFile.Write($"Controller{i + 1}", "0", "ControllerNumber");
 
                 // we need to define Controller index overwrite
-                XInputController vController = ControllerManager.GetVirtualControllers().OfType<XInputController>().FirstOrDefault();
+                XInputController vController = controllerManager.Value.GetVirtualControllers().OfType<XInputController>().FirstOrDefault();
                 if (vController is null)
                     return false;
 
@@ -389,7 +411,7 @@ public static class XInputPlus
                 userIndex.Remove(idx);
 
                 // remove all hidden physical controllers from the list
-                foreach (XInputController pController in ControllerManager.GetPhysicalControllers().OfType<XInputController>().Where(c => c.IsHidden()))
+                foreach (XInputController pController in controllerManager.Value.GetPhysicalControllers().OfType<XInputController>().Where(c => c.IsHidden()))
                     userIndex.Remove(pController.GetUserIndex() + 1);
 
                 for (int i = 0; i < userIndex.Count; i++)
@@ -408,7 +430,7 @@ public static class XInputPlus
     }
 
     // https://msdn.microsoft.com/en-us/library/windows/desktop/ms684139%28v=vs.85%29.aspx
-    public static bool Is64bitProcess(Process process)
+    public bool Is64bitProcess(Process process)
     {
         if (!Environment.Is64BitOperatingSystem)
             return false;

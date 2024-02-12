@@ -11,8 +11,9 @@ public class AMDProcessor : Processor
 {
     public RyzenFamily family;
     public IntPtr ry;
+    private readonly IVangoghGPU vangoghGPU;
 
-    public AMDProcessor()
+    public AMDProcessor(IVangoghGPU vangoghGPU):base(vangoghGPU)
     {
         ry = RyzenAdj.init_ryzenadj();
 
@@ -39,7 +40,7 @@ public class AMDProcessor : Processor
                     CanChangeGPU = true;
                     break;
                 case RyzenFamily.FAM_VANGOGH:
-                    CanChangeGPU = VangoghGPU.Detect() == VangoghGPU.DetectionStatus.Detected;
+                    CanChangeGPU = vangoghGPU.Detect() == VangoghGPU.DetectionStatus.Detected;
                     break;
             }
 
@@ -78,6 +79,8 @@ public class AMDProcessor : Processor
             m_PrevValues[type] = 0;
             */
         }
+
+        this.vangoghGPU = vangoghGPU;
     }
 
     public override void Initialize()
@@ -177,7 +180,7 @@ public class AMDProcessor : Processor
             {
                 case RyzenFamily.FAM_VANGOGH:
                     {
-                        using (var sd = VangoghGPU.Open())
+                        using (var sd = vangoghGPU.Open())
                         {
                             if (sd is null)
                             {

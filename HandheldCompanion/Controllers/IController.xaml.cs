@@ -82,7 +82,8 @@ namespace HandheldCompanion.Controllers
         protected double VibrationStrength = 1.0d;
         private byte _UserIndex = 255;
         private readonly int MaxUserIndex = 10;
-
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<IControllerManager> controllerManager;
         private int workingIdx = 0;
         private Thread workingThread;
         private bool workingThreadRunning;
@@ -199,11 +200,17 @@ namespace HandheldCompanion.Controllers
                 Thread.Sleep(100);
             }
         }
-
         public IController()
         {
             InitializeComponent();
             MaxUserIndex = UserIndexPanel.Children.Count;
+        }
+        public IController(Lazy<ISettingsManager> settingsManager, Lazy<IControllerManager> controllerManager)
+        {
+            InitializeComponent();
+            MaxUserIndex = UserIndexPanel.Children.Count;
+            this.settingsManager = settingsManager;
+            this.controllerManager = controllerManager;
         }
 
         public virtual void AttachDetails(PnPDetails details)
@@ -407,7 +414,7 @@ namespace HandheldCompanion.Controllers
         // this function cannot be called twice
         public virtual void Plug()
         {
-            SetVibrationStrength(SettingsManager.GetUInt("VibrationStrength"));
+            SetVibrationStrength(settingsManager.Value.GetUInt("VibrationStrength"));
 
             InjectedButtons.Clear();
 
@@ -443,7 +450,7 @@ namespace HandheldCompanion.Controllers
             {
                 IsBusy = true;
 
-                ControllerManager.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
+                controllerManager.Value.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
                 CyclePort();
             }
 
@@ -458,7 +465,7 @@ namespace HandheldCompanion.Controllers
             {
                 IsBusy = true;
 
-                ControllerManager.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
+                controllerManager.Value.PowerCyclers[Details.baseContainerDeviceInstanceId] = true;
                 CyclePort();
             }
 

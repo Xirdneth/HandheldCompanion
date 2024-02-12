@@ -14,9 +14,9 @@ using System.Reflection;
 
 namespace HandheldCompanion.Managers;
 
-public static class UpdateManager
+public class UpdateManager : IUpdateManager
 {
-    public static event UpdatedEventHandler Updated;
+    public event UpdatedEventHandler Updated;
     public delegate void UpdatedEventHandler(UpdateStatus status, UpdateFile? update, object? value);
 
     public enum UpdateStatus
@@ -32,24 +32,25 @@ public static class UpdateManager
         Failed
     }
 
-    private static readonly Assembly assembly;
+    private readonly Assembly assembly;
 
-    private static readonly Version build;
-    private static DateTime lastchecked;
+    private readonly Version build;
+    private DateTime lastchecked;
 
-    private static UpdateStatus status;
-    private static readonly Dictionary<string, UpdateFile> updateFiles = new();
-    private static string url;
-    private static readonly WebClient webClient;
-    private static readonly string InstallPath;
+    private UpdateStatus status;
+    private readonly Dictionary<string, UpdateFile> updateFiles = new();
+    private string url;
+    private readonly WebClient webClient;
+    private readonly string InstallPath;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    public bool IsInitialized { get; set; }
 
-    private static bool IsInitialized;
-
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();
 
-    static UpdateManager()
+    public UpdateManager(Lazy<ISettingsManager> settingsManager)
     {
+        this.settingsManager = settingsManager;
         // check assembly
         assembly = Assembly.GetExecutingAssembly();
         build = assembly.GetName().Version;
@@ -69,10 +70,10 @@ public static class UpdateManager
         webClient.DownloadProgressChanged += WebClient_DownloadProgressChanged;
         webClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value)
     {
         switch (name)
         {
@@ -82,7 +83,7 @@ public static class UpdateManager
         }
     }
 
-    private static int GetFileSize(Uri uriPath)
+    private int GetFileSize(Uri uriPath)
     {
         try
         {
@@ -101,7 +102,7 @@ public static class UpdateManager
         }
     }
 
-    private static void WebClient_DownloadFileCompleted(object? sender, AsyncCompletedEventArgs e)
+    private void WebClient_DownloadFileCompleted(object? sender, AsyncCompletedEventArgs e)
     {
         if (status != UpdateStatus.Downloading)
             return;
@@ -117,7 +118,7 @@ public static class UpdateManager
         Updated?.Invoke(status, update, null);
     }
 
-    private static void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
+    private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
     {
         if (status != UpdateStatus.Download && status != UpdateStatus.Downloading)
             return;
@@ -131,7 +132,7 @@ public static class UpdateManager
         }
     }
 
-    private static void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
+    private void WebClient_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
     {
         // something went wrong with the connection
         if (e.Error is not null)
@@ -168,7 +169,7 @@ public static class UpdateManager
         }
     }
 
-    public static void DownloadUpdateFile(UpdateFile update)
+    public void DownloadUpdateFile(UpdateFile update)
     {
         if (webClient.IsBusy)
             return; // lazy
@@ -181,7 +182,7 @@ public static class UpdateManager
         webClient.DownloadFileAsync(update.uri, filename, update.filename);
     }
 
-    private static void ParseLatest(string contentsJson)
+    private void ParseLatest(string contentsJson)
     {
         try
         {
@@ -249,9 +250,9 @@ public static class UpdateManager
         }
     }
 
-    public static void Start()
+    public void Start()
     {
-        var dateTime = SettingsManager.GetDateTime("UpdateLastChecked");
+        var dateTime = settingsManager.Value.GetDateTime("UpdateLastChecked");
 
         lastchecked = dateTime;
 
@@ -264,30 +265,30 @@ public static class UpdateManager
         LogManager.LogInformation("{0} has started", "UpdateManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
 
         IsInitialized = false;
 
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        settingsManager.Value.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
         LogManager.LogInformation("{0} has stopped", "UpdateManager");
     }
 
-    public static DateTime GetTime()
+    public DateTime GetTime()
     {
         return lastchecked;
     }
 
-    private static void UpdateTime()
+    private void UpdateTime()
     {
         lastchecked = DateTime.Now;
-        SettingsManager.SetProperty("UpdateLastChecked", lastchecked);
+        settingsManager.Value.SetProperty("UpdateLastChecked", lastchecked);
     }
 
-    public static void StartProcess()
+    public void StartProcess()
     {
         // Update UI
         status = UpdateStatus.Checking;
@@ -297,7 +298,7 @@ public static class UpdateManager
         webClient.DownloadStringAsync(new Uri($"{url}/releases/latest"));
     }
 
-    public static void InstallUpdate(UpdateFile updateFile)
+    public void InstallUpdate(UpdateFile updateFile)
     {
         var filename = Path.Combine(InstallPath, updateFile.filename);
 

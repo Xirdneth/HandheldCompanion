@@ -23,12 +23,17 @@ public class NeptuneController : SteamController
 
     public const sbyte MinIntensity = -2;
     public const sbyte MaxIntensity = 10;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    // TODO: why not use TimerManager.Tick?
+    // TODO: why not use timerManager.Value.Tick?
     private Thread rumbleThread;
     private bool rumbleThreadRunning;
 
-    public NeptuneController(PnPDetails details) : base()
+    public NeptuneController(PnPDetails details, 
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : base(settingsManager, controllerManager)
     {
         AttachDetails(details);
 
@@ -62,6 +67,8 @@ public class NeptuneController : SteamController
 
         TargetAxis.Add(AxisLayoutFlags.LeftPad);
         TargetAxis.Add(AxisLayoutFlags.RightPad);
+        this.settingsManager = settingsManager;
+        this.timerManager = timerManager;
     }
 
     public override void AttachDetails(PnPDetails details)
@@ -318,9 +325,9 @@ public class NeptuneController : SteamController
         rumbleThread.IsBackground = true;
         rumbleThread.Start();
 
-        SetVirtualMuted(SettingsManager.GetBoolean("SteamControllerMute"));
+        SetVirtualMuted(settingsManager.Value.GetBoolean("SteamControllerMute"));
 
-        TimerManager.Tick += UpdateInputs;
+        timerManager.Value.Tick += UpdateInputs;
 
         base.Plug();
     }
@@ -347,7 +354,7 @@ public class NeptuneController : SteamController
             return;
         }
 
-        TimerManager.Tick -= UpdateInputs;
+        timerManager.Value.Tick -= UpdateInputs;
 
         base.Unplug();
     }
@@ -379,7 +386,7 @@ public class NeptuneController : SteamController
             if (GetHapticIntensity(FeedbackSmallMotor, MinIntensity, MaxIntensity, out var rightIntensity))
                 Controller.SetHaptic2(SCHapticMotor.Right, NCHapticStyle.Weak, rightIntensity);
 
-            await Task.Delay(TimerManager.GetPeriod() * 2);
+            await Task.Delay(timerManager.Value.GetPeriod() * 2);
         }
     }
 

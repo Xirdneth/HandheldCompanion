@@ -4,6 +4,7 @@ using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using iNKORE.UI.WPF.Modern.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Diagnostics;
 using System.Windows;
@@ -12,8 +13,11 @@ namespace HandheldCompanion.Controls.Hints
 {
     public class Hint_AMD_IntegerScalingCheck : IHint
     {
+        private readonly Lazy<IPerformanceManager> performanceManager;
+
         public Hint_AMD_IntegerScalingCheck() : base()
         {
+            this.performanceManager = App.ServiceProvider.GetRequiredService<Lazy<IPerformanceManager>>();
             // default state
             this.HintActionButton.Visibility = Visibility.Visible;
 
@@ -24,12 +28,13 @@ namespace HandheldCompanion.Controls.Hints
             this.HintActionButton.Content = Properties.Resources.Hint_AMD_IntegerScalingCheckAction;
 
             // manage events
-            PerformanceManager.Initialized += PerformanceManager_Initialized;
+            performanceManager.Value.Initialized += PerformanceManager_Initialized;
+
         }
 
         private void PerformanceManager_Initialized()
         {
-            Processor processor = PerformanceManager.GetProcessor();
+            Processor processor = performanceManager.Value.GetProcessor();
 
             if (processor is not null && processor is AMDProcessor)
                 CheckSettings();

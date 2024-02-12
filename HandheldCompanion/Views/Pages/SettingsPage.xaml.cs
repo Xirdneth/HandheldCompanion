@@ -27,10 +27,25 @@ namespace HandheldCompanion.Views.Pages;
 /// </summary>
 public partial class SettingsPage : Page
 {
-    public SettingsPage()
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IUpdateManager> updateManager;
+
+    public SettingsPage(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IUpdateManager> updateManager)
     {
         InitializeComponent();
-
+        this.settingsManager = settingsManager;
+        this.controllerManager = controllerManager;
+        this.platformManager = platformManager;
+        this.multimediaManager = multimediaManager;
+        this.updateManager = updateManager;
         // initialize components
         cB_Language.Items.Add(new CultureInfo("en-US"));
         cB_Language.Items.Add(new CultureInfo("fr-FR"));
@@ -47,18 +62,23 @@ public partial class SettingsPage : Page
         UpdateDevice();
 
         // initialize manager(s)
-        UpdateManager.Updated += UpdateManager_Updated;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
+        updateManager.Value.Updated += UpdateManager_Updated;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
 
-        PlatformManager.RTSS.Updated += RTSS_Updated;
+        platformManager.Value.RTSS.Updated += RTSS_Updated;
 
         // force call
         // todo: make PlatformManager static
-        RTSS_Updated(PlatformManager.RTSS.Status);
+        RTSS_Updated(platformManager.Value.RTSS.Status);
     }
 
-    public SettingsPage(string? Tag) : this()
+    public SettingsPage(string? Tag,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IUpdateManager> updateManager) : this(settingsManager, controllerManager, platformManager, multimediaManager, updateManager)
     {
         this.Tag = Tag;
     }
@@ -132,15 +152,15 @@ public partial class SettingsPage : Page
                         {
                             if (MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.InternalSensor))
                             {
-                                SettingsManager.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorInternal));
+                                settingsManager.Value.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorInternal));
                             }
                             else if (MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.ExternalSensor))
                             {
-                                SettingsManager.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorExternal));
+                                settingsManager.Value.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorExternal));
                             }
                             else
                             {
-                                SettingsManager.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorNone));
+                                settingsManager.Value.SetProperty(name, cB_SensorSelection.Items.IndexOf(SensorNone));
                             }
 
                             return;
@@ -233,7 +253,7 @@ public partial class SettingsPage : Page
 
     private void Page_Loaded(object? sender, RoutedEventArgs? e)
     {
-        UpdateManager.Start();
+        updateManager.Value.Start();
     }
 
     public void Page_Closed()
@@ -245,7 +265,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("RunAtStartup", Toggle_AutoStart.IsOn);
+        settingsManager.Value.SetProperty("RunAtStartup", Toggle_AutoStart.IsOn);
     }
 
     private void Toggle_Background_Toggled(object? sender, RoutedEventArgs? e)
@@ -253,7 +273,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("StartMinimized", Toggle_Background.IsOn);
+        settingsManager.Value.SetProperty("StartMinimized", Toggle_Background.IsOn);
     }
 
     private void Toggle_CloseMinimizes_Toggled(object? sender, RoutedEventArgs? e)
@@ -261,7 +281,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("CloseMinimises", Toggle_CloseMinimizes.IsOn);
+        settingsManager.Value.SetProperty("CloseMinimises", Toggle_CloseMinimizes.IsOn);
     }
 
     private void Toggle_DesktopProfileOnStart_Toggled(object? sender, RoutedEventArgs? e)
@@ -269,7 +289,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("DesktopProfileOnStart", Toggle_DesktopProfileOnStart.IsOn);
+        settingsManager.Value.SetProperty("DesktopProfileOnStart", Toggle_DesktopProfileOnStart.IsOn);
     }
 
     private void Button_DetectNativeDisplayOrientation_Click(object sender, RoutedEventArgs? e)
@@ -277,9 +297,9 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        var rotation = MultimediaManager.GetScreenOrientation();
+        var rotation = multimediaManager.Value.GetScreenOrientation();
         rotation = new ScreenRotation(rotation.rotationUnnormalized, ScreenRotation.Rotations.UNSET);
-        SettingsManager.SetProperty("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
+        settingsManager.Value.SetProperty("NativeDisplayOrientation", (int)rotation.rotationNativeBase);
     }
 
     private void UpdateManager_Updated(UpdateStatus status, UpdateFile updateFile, object value)
@@ -304,7 +324,7 @@ public partial class SettingsPage : Page
                         {
                             LabelUpdate.Text = Properties.Resources.SettingsPage_UpToDate;
                             LabelUpdateDate.Text = Properties.Resources.SettingsPage_LastChecked +
-                                                   UpdateManager.GetTime();
+                                                   updateManager.Value.GetTime();
 
                             LabelUpdateDate.Visibility = Visibility.Visible;
                             GridUpdateSymbol.Visibility = Visibility.Visible;
@@ -339,13 +359,13 @@ public partial class SettingsPage : Page
                             // Set download button action
                             update.updateDownload.Click += (sender, e) =>
                             {
-                                UpdateManager.DownloadUpdateFile(update);
+                                updateManager.Value.DownloadUpdateFile(update);
                             };
 
                             // Set button action
                             update.updateInstall.Click += (sender, e) =>
                             {
-                                UpdateManager.InstallUpdate(update);
+                                updateManager.Value.InstallUpdate(update);
                             };
 
                             CurrentUpdates.Children.Add(border);
@@ -389,7 +409,7 @@ public partial class SettingsPage : Page
 
     private void B_CheckUpdate_Click(object? sender, RoutedEventArgs? e)
     {
-        new Thread(() => { UpdateManager.StartProcess(); }).Start();
+        new Thread(() => { updateManager.Value.StartProcess(); }).Start();
     }
 
     private void cB_Language_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -402,7 +422,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("CurrentCulture", culture.Name);
+        settingsManager.Value.SetProperty("CurrentCulture", culture.Name);
 
         // prevent message from being displayed again...
         if (culture.Name == CultureInfo.CurrentCulture.Name)
@@ -418,7 +438,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("ToastEnable", Toggle_Notification.IsOn);
+        settingsManager.Value.SetProperty("ToastEnable", Toggle_Notification.IsOn);
     }
 
     private void cB_Theme_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -438,7 +458,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("MainWindowTheme", cB_Theme.SelectedIndex);
+        settingsManager.Value.SetProperty("MainWindowTheme", cB_Theme.SelectedIndex);
     }
 
     private void cB_QuickToolsBackdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -452,7 +472,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
+        settingsManager.Value.SetProperty("QuicktoolsBackdrop", cB_QuickToolsBackdrop.SelectedIndex);
     }
 
     private void cB_Backdrop_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
@@ -466,7 +486,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
+        settingsManager.Value.SetProperty("MainWindowBackdrop", cB_Backdrop.SelectedIndex);
     }
 
     private void SwitchBackdrop(Window targetWindow, int idx)
@@ -519,7 +539,7 @@ public partial class SettingsPage : Page
         // TODO: Implement me
 
         if (IsLoaded)
-            SettingsManager.SetProperty("SensorSelection", cB_SensorSelection.SelectedIndex);
+            settingsManager.Value.SetProperty("SensorSelection", cB_SensorSelection.SelectedIndex);
     }
 
     private void SensorPlacement_Click(object sender, RoutedEventArgs? e)
@@ -529,7 +549,7 @@ public partial class SettingsPage : Page
         UpdateUI_SensorPlacement(Tag);
 
         if (IsLoaded)
-            SettingsManager.SetProperty("SensorPlacement", Tag);
+            settingsManager.Value.SetProperty("SensorPlacement", Tag);
     }
 
     private void UpdateUI_SensorPlacement(int? SensorPlacement)
@@ -547,7 +567,7 @@ public partial class SettingsPage : Page
         var isUpsideDown = Toggle_SensorPlacementUpsideDown.IsOn;
 
         if (IsLoaded)
-            SettingsManager.SetProperty("SensorPlacementUpsideDown", isUpsideDown);
+            settingsManager.Value.SetProperty("SensorPlacementUpsideDown", isUpsideDown);
     }
 
     private void Toggle_RTSS_Toggled(object sender, RoutedEventArgs e)
@@ -555,7 +575,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
+        settingsManager.Value.SetProperty("PlatformRTSSEnabled", Toggle_RTSS.IsOn);
     }
 
     private void cB_QuicktoolsPosition_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -563,7 +583,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
+        settingsManager.Value.SetProperty("QuickToolsLocation", cB_QuicktoolsPosition.SelectedIndex);
     }
 
     private void Toggle_QuicktoolsAutoHide_Toggled(object sender, RoutedEventArgs e)
@@ -571,7 +591,7 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
+        settingsManager.Value.SetProperty("QuickToolsAutoHide", Toggle_QuicktoolsAutoHide.IsOn);
     }
 
     private void Toggle_UISounds_Toggled(object sender, RoutedEventArgs e)
@@ -579,6 +599,6 @@ public partial class SettingsPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("UISounds", Toggle_UISounds.IsOn);
+        settingsManager.Value.SetProperty("UISounds", Toggle_UISounds.IsOn);
     }
 }

@@ -1,21 +1,26 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
+using HandheldCompanion.Views;
+using System;
 
 namespace HandheldCompanion.Managers
 {
-    public static class GPUManager
+    public class GPUManager : IGPUManager
     {
         #region events
-        public static event InitializedEventHandler Initialized;
+        public event InitializedEventHandler Initialized;
         public delegate void InitializedEventHandler(GPU GPU);
         #endregion
 
-        public static bool IsInitialized;
+        public bool IsInitialized;
 
-        private static GPU currentGPU = new();
-        
-        static GPUManager()
+        private GPU currentGPU { get; set; }
+        private readonly Lazy<IProfileManager> profileManager;
+
+        public GPUManager(Lazy<IProfileManager> profileManager)
         {
+            this.profileManager = profileManager;
+            currentGPU = new();
             // initialize processor
             currentGPU = GPU.GetCurrent();
             currentGPU.ImageSharpeningChanged += CurrentGPU_ImageSharpeningChanged;
@@ -32,15 +37,16 @@ namespace HandheldCompanion.Managers
             }
 
             // manage events
-            ProfileManager.Applied += ProfileManager_Applied;
-            ProfileManager.Discarded += ProfileManager_Discarded;
-            ProfileManager.Updated += ProfileManager_Updated;
+            profileManager.Value.Applied += ProfileManager_Applied;
+            profileManager.Value.Discarded += ProfileManager_Discarded;
+            profileManager.Value.Updated += ProfileManager_Updated;
+
         }
 
-        private static void CurrentGPU_RSRStateChanged(bool Supported, bool Enabled, int Sharpness)
+        private void CurrentGPU_RSRStateChanged(bool Supported, bool Enabled, int Sharpness)
         {
             // todo: use ProfileMager events
-            Profile profile = ProfileManager.GetCurrent();
+            Profile profile = profileManager.Value.GetCurrent();
             AMDGPU amdGPU = (AMDGPU)currentGPU;
 
             if (Enabled != profile.RSREnabled)
@@ -49,19 +55,19 @@ namespace HandheldCompanion.Managers
                 amdGPU.SetRSRSharpness(profile.RSRSharpness);
         }
 
-        private static void CurrentGPU_IntegerScalingChanged(bool Supported, bool Enabled)
+        private void CurrentGPU_IntegerScalingChanged(bool Supported, bool Enabled)
         {
             // todo: use ProfileMager events
-            Profile profile = ProfileManager.GetCurrent();
+            Profile profile = profileManager.Value.GetCurrent();
 
             if (Enabled != profile.IntegerScalingEnabled)
                 currentGPU.SetIntegerScaling(profile.IntegerScalingEnabled, profile.IntegerScalingType);
         }
 
-        private static void CurrentGPU_GPUScalingChanged(bool Supported, bool Enabled, int Mode)
+        private void CurrentGPU_GPUScalingChanged(bool Supported, bool Enabled, int Mode)
         {
             // todo: use ProfileMager events
-            Profile profile = ProfileManager.GetCurrent();
+            Profile profile = profileManager.Value.GetCurrent();
 
             if (Enabled != profile.GPUScaling)
                 currentGPU.SetGPUScaling(profile.GPUScaling);
@@ -69,10 +75,10 @@ namespace HandheldCompanion.Managers
                 currentGPU.SetScalingMode(profile.ScalingMode);
         }
 
-        private static void CurrentGPU_ImageSharpeningChanged(bool Enabled, int Sharpness)
+        private void CurrentGPU_ImageSharpeningChanged(bool Enabled, int Sharpness)
         {
             // todo: use ProfileMager events
-            Profile profile = ProfileManager.GetCurrent();
+            Profile profile = profileManager.Value.GetCurrent();
 
             if (Enabled != profile.RISEnabled)
                 currentGPU.SetImageSharpening(profile.RISEnabled);
@@ -80,7 +86,7 @@ namespace HandheldCompanion.Managers
                 currentGPU.SetImageSharpeningSharpness(Sharpness);
         }
 
-        public static void Start()
+        public void Start()
         {
             currentGPU.Start();
 
@@ -90,7 +96,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has started", "GPUManager");
         }
 
-        public static void Stop()
+        public void Stop()
         {
             if (!IsInitialized)
                 return;
@@ -102,7 +108,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has stopped", "GPUManager");
         }
 
-        private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+        private void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
             try
             {
@@ -166,7 +172,7 @@ namespace HandheldCompanion.Managers
             catch { }
         }
 
-        private static void ProfileManager_Discarded(Profile profile)
+        private void ProfileManager_Discarded(Profile profile)
         {
             try
             {
@@ -195,7 +201,7 @@ namespace HandheldCompanion.Managers
         }
 
         // todo: moveme
-        private static void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
+        private void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
         {
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.DisabledMaximizedWindowedValue, !profile.FullScreenOptimization);
             ProcessEx.SetAppCompatFlag(profile.Path, ProcessEx.HighDPIAwareValue, !profile.HighDPIAware);

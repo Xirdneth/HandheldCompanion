@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Processors.Intel;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Processors.Intel;
 using System;
 using System.Threading;
 using System.Timers;
@@ -10,7 +11,7 @@ public class IntelProcessor : Processor
     public string family;
     public KX platform = new();
 
-    public IntelProcessor()
+    public IntelProcessor(IVangoghGPU vangoghGPU):base(vangoghGPU)
     {
         IsInitialized = platform.init();
         if (IsInitialized)

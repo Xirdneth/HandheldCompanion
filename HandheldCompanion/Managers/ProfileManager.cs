@@ -13,38 +13,60 @@ using static HandheldCompanion.Utils.XInputPlusUtils;
 
 namespace HandheldCompanion.Managers;
 
-public static class ProfileManager
+public class ProfileManager : IProfileManager
 {
     public const string DefaultName = "Default";
-
-    public static Dictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
-    public static List<Profile> subProfiles = new();
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IXInputPlus> xInputPlus;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<IToastManager> toastManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<ITimerManager> timerManager;
+    public Dictionary<string, Profile> profiles = new(StringComparer.InvariantCultureIgnoreCase);
+    public List<Profile> subProfiles = new();
 
     private static Profile currentProfile;
 
     private static string ProfilesPath;
 
-    public static bool IsInitialized;
-
-    static ProfileManager()
+    public bool IsInitialized;
+    public ProfileManager(
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IXInputPlus> xInputPlus,
+        Lazy<IProcessManager> processManager,
+        Lazy<IToastManager> toastManager,
+        //Lazy<ILayoutTemplate> layoutTemplate,
+        Lazy<IProfileManager> profileManager,
+        Lazy<ITimerManager> timerManager)
     {
+        this.powerProfileManager = powerProfileManager;
+        this.controllerManager = controllerManager;
+        this.xInputPlus = xInputPlus;
+        this.processManager = processManager;
+        this.toastManager = toastManager;
+        //this.layoutTemplate = layoutTemplate;
+        this.profileManager = profileManager;
+        this.timerManager = timerManager;
         // initialiaze path(s)
         ProfilesPath = Path.Combine(MainWindow.SettingsPath, "profiles");
         if (!Directory.Exists(ProfilesPath))
             Directory.CreateDirectory(ProfilesPath);
 
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
-        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
+        processManager.Value.ForegroundChanged += ProcessManager_ForegroundChanged;
+        processManager.Value.ProcessStarted += ProcessManager_ProcessStarted;
+        processManager.Value.ProcessStopped += ProcessManager_ProcessStopped;
 
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
+        powerProfileManager.Value.Deleted += PowerProfileManager_Deleted;
 
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
+        controllerManager.Value.ControllerPlugged += ControllerManager_ControllerPlugged;
     }
 
-    public static FileSystemWatcher profileWatcher { get; set; }
+    public FileSystemWatcher profileWatcher { get; set; }
 
-    public static void Start()
+    public void Start()
     {
         // monitor profile files
         profileWatcher = new FileSystemWatcher
@@ -66,6 +88,7 @@ public static class ProfileManager
         if (!HasDefault())
         {
             Layout deviceLayout = MainWindow.CurrentDevice.DefaultLayout.Clone() as Layout;
+
             Profile defaultProfile = new()
             {
                 Name = DefaultName,
@@ -85,7 +108,7 @@ public static class ProfileManager
         LogManager.LogInformation("{0} has started", "ProfileManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
@@ -98,7 +121,7 @@ public static class ProfileManager
         LogManager.LogInformation("{0} has stopped", "ProfileManager");
     }
 
-    public static bool Contains(Profile profile)
+    public bool Contains(Profile profile)
     {
         foreach (var pr in profiles.Values)
             if (pr.Path.Equals(profile.Path, StringComparison.InvariantCultureIgnoreCase))
@@ -107,7 +130,7 @@ public static class ProfileManager
         return false;
     }
 
-    public static bool Contains(string fileName)
+    public bool Contains(string fileName)
     {
         foreach (var pr in profiles.Values)
             if (pr.Path.Equals(fileName, StringComparison.InvariantCultureIgnoreCase))
@@ -116,7 +139,7 @@ public static class ProfileManager
         return false;
     }
 
-    public static Profile GetProfileFromPath(string path, bool ignoreStatus)
+    public Profile GetProfileFromPath(string path, bool ignoreStatus)
     {
         // check if favorite sub profile exists for path
         Profile profile = subProfiles.FirstOrDefault(pr => pr.Path == path && pr.IsFavoriteSubProfile);
@@ -142,7 +165,7 @@ public static class ProfileManager
         return profile.Enabled ? profile : GetDefault();
     }
 
-    public static Profile GetProfileFromGuid(Guid Guid, bool ignoreStatus, bool isSubProfile = false)
+    public Profile GetProfileFromGuid(Guid Guid, bool ignoreStatus, bool isSubProfile = false)
     {
         Profile profile = null;
 
@@ -162,14 +185,14 @@ public static class ProfileManager
         return profile.Enabled ? profile : GetDefault();
     }
 
-    public static Profile[] GetSubProfilesFromPath(string path, bool ignoreStatus)
+    public Profile[] GetSubProfilesFromPath(string path, bool ignoreStatus)
     {
         // get subprofile corresponding to path
         List<Profile> filteredSubProfiles = subProfiles.Where(pr => pr.Path == path).ToList();
         return filteredSubProfiles.OrderBy(pr => pr.Name).ToArray();
     }
 
-    public static Profile GetProfileForSubProfile(Profile subProfile)
+    public Profile GetProfileForSubProfile(Profile subProfile)
     {
         // if passed in profile is main profile
         if (!subProfile.IsSubProfile || !profiles.ContainsKey(subProfile.Path))
@@ -179,7 +202,7 @@ public static class ProfileManager
         return profiles[subProfile.Path];
     }
 
-    public static void SetSubProfileAsFavorite(Profile subProfile)
+    public void SetSubProfileAsFavorite(Profile subProfile)
     {
         // remove favorite from all subprofiles
         foreach (var profile in GetSubProfilesFromPath(subProfile.Path, false))
@@ -196,7 +219,7 @@ public static class ProfileManager
         }
     }
 
-    public static void CycleSubProfiles(bool previous = false)
+    public void CycleSubProfiles(bool previous = false)
     {
         if (currentProfile == null)
             return;
@@ -210,7 +233,7 @@ public static class ProfileManager
             return;
 
         // get index of currently applied profile
-        int currentIndex = subProfilesList.IndexOf(currentProfile);        
+        int currentIndex = subProfilesList.IndexOf(currentProfile);
         int newIndex = currentIndex;
 
         // previous? decrement, next? increment
@@ -232,7 +255,7 @@ public static class ProfileManager
     }
 
 
-    private static void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background,
+    private void ApplyProfile(Profile profile, UpdateSource source = UpdateSource.Background,
         bool announce = true)
     {
         // might not be the same anymore if disabled
@@ -254,11 +277,11 @@ public static class ProfileManager
         if (announce)
         {
             LogManager.LogInformation("Profile {0} applied", profile.Name);
-            ToastManager.SendToast($"Profile {profile.Name} applied");
+            toastManager.Value.SendToast($"Profile {profile.Name} applied");
         }
     }
 
-    private static void PowerProfileManager_Deleted(PowerProfile powerProfile)
+    private void PowerProfileManager_Deleted(PowerProfile powerProfile)
     {
         Profile profileToApply = null;
 
@@ -303,7 +326,7 @@ public static class ProfileManager
 
     }
 
-    private static void ProcessManager_ProcessStopped(ProcessEx processEx)
+    private void ProcessManager_ProcessStopped(ProcessEx processEx)
     {
         try
         {
@@ -330,7 +353,7 @@ public static class ProfileManager
         }
     }
 
-    private static void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
+    private void ProcessManager_ProcessStarted(ProcessEx processEx, bool OnStartup)
     {
         try
         {
@@ -350,7 +373,7 @@ public static class ProfileManager
         }
     }
 
-    private static void ProcessManager_ForegroundChanged(ProcessEx proc, ProcessEx back)
+    private void ProcessManager_ForegroundChanged(ProcessEx proc, ProcessEx back)
     {
         try
         {
@@ -379,7 +402,7 @@ public static class ProfileManager
         }
     }
 
-    private static void ProfileDeleted(object sender, FileSystemEventArgs e)
+    private void ProfileDeleted(object sender, FileSystemEventArgs e)
     {
         // not ideal
         var ProfileName = e.Name.Replace(".json", "");
@@ -399,19 +422,19 @@ public static class ProfileManager
         DeleteProfile(profile);
     }
 
-    private static bool HasDefault()
+    private bool HasDefault()
     {
         return profiles.Values.Count(a => a.Default) != 0;
     }
 
-    public static Profile GetDefault()
+    public Profile GetDefault()
     {
         if (HasDefault())
             return profiles.Values.FirstOrDefault(a => a.Default);
-        return new Profile();
+        return new Profile(profileManager);
     }
 
-    public static Profile GetCurrent()
+    public Profile GetCurrent()
     {
         if (currentProfile is not null)
             return currentProfile;
@@ -419,7 +442,7 @@ public static class ProfileManager
         return GetDefault();
     }
 
-    private static void ProcessProfile(string fileName)
+    private void ProcessProfile(string fileName)
     {
         Profile profile = null;
         try
@@ -476,7 +499,7 @@ public static class ProfileManager
             ApplyProfile(profile, UpdateSource.Serializer);
     }
 
-    public static void DeleteProfile(Profile profile)
+    public void DeleteProfile(Profile profile)
     {
         var profilePath = Path.Combine(ProfilesPath, profile.GetFileName());
 
@@ -493,7 +516,7 @@ public static class ProfileManager
             HidHide.UnregisterApplication(profile.Path);
 
             // Remove XInputPlus (extended compatibility)
-            XInputPlus.UnregisterApplication(profile);
+            xInputPlus.Value.UnregisterApplication(profile);
 
             profiles.Remove(profile.Path);
 
@@ -511,7 +534,7 @@ public static class ProfileManager
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast($"Profile {profile.Name} deleted");
+            toastManager.Value.SendToast($"Profile {profile.Name} deleted");
 
             LogManager.LogInformation("Deleted profile {0}", profilePath);
 
@@ -523,7 +546,7 @@ public static class ProfileManager
         FileUtils.FileDelete(profilePath);
     }
 
-    public static void DeleteSubProfile(Profile subProfile)
+    public void DeleteSubProfile(Profile subProfile)
     {
         var profilePath = Path.Combine(ProfilesPath, subProfile.GetFileName());
 
@@ -543,7 +566,7 @@ public static class ProfileManager
 
             // send toast
             // todo: localize me
-            ToastManager.SendToast($"Subprofile {subProfile.Name} deleted");
+            toastManager.Value.SendToast($"Subprofile {subProfile.Name} deleted");
 
             LogManager.LogInformation("Deleted subprofile {0}", profilePath);
 
@@ -559,7 +582,7 @@ public static class ProfileManager
         FileUtils.FileDelete(profilePath);
     }
 
-    public static void SerializeProfile(Profile profile)
+    public void SerializeProfile(Profile profile)
     {
         // update profile version to current build
         profile.Version = new Version(MainWindow.fileVersionInfo.FileVersion);
@@ -580,7 +603,7 @@ public static class ProfileManager
         catch { }
     }
 
-    private static void SanitizeProfile(Profile profile)
+    private void SanitizeProfile(Profile profile)
     {
         profile.ErrorCode = ProfileErrorCode.None;
 
@@ -601,16 +624,16 @@ public static class ProfileManager
             if (!FileUtils.IsDirectoryWritable(processpath))
                 profile.ErrorCode |= ProfileErrorCode.MissingPermission;
 
-            if (ProcessManager.GetProcesses(profile.Executable).Capacity > 0)
+            if (processManager.Value.GetProcesses(profile.Executable).Capacity > 0)
                 profile.ErrorCode |= ProfileErrorCode.Running;
         }
 
         // looks like profile power profile was deleted, restore balanced
-        if (!PowerProfileManager.Contains(profile.PowerProfile))
+        if (!powerProfileManager.Value.Contains(profile.PowerProfile))
             profile.PowerProfile = OSPowerMode.BetterPerformance;
     }
 
-    public static void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
+    public void UpdateOrCreateProfile(Profile profile, UpdateSource source = UpdateSource.Background)
     {
         LogManager.LogInformation($"Attempting to update/create profile {profile.Name} => sub profile? {profile.IsSubProfile}");
         bool isCurrent = false;
@@ -688,7 +711,7 @@ public static class ProfileManager
         SerializeProfile(profile);
     }
 
-    public static bool UpdateProfileCloaking(Profile profile)
+    public bool UpdateProfileCloaking(Profile profile)
     {
         switch (profile.ErrorCode)
         {
@@ -708,7 +731,7 @@ public static class ProfileManager
         }
     }
 
-    public static bool UpdateProfileWrapper(Profile profile)
+    public bool UpdateProfileWrapper(Profile profile)
     {
         switch (profile.ErrorCode)
         {
@@ -722,15 +745,15 @@ public static class ProfileManager
         switch (profile.XInputPlus)
         {
             case XInputPlusMethod.Redirection:
-                return XInputPlus.RegisterApplication(profile);
+                return xInputPlus.Value.RegisterApplication(profile);
             default:
             case XInputPlusMethod.Disabled:
             case XInputPlusMethod.Injection:
-                return XInputPlus.UnregisterApplication(profile);
+                return xInputPlus.Value.UnregisterApplication(profile);
         }
     }
 
-    private static void ControllerManager_ControllerPlugged(IController Controller, bool IsPowerCycling)
+    private void ControllerManager_ControllerPlugged(IController Controller, bool IsPowerCycling)
     {
         // we're only interest in virtual, XInput controllers
         if (Controller is not XInputController || !Controller.IsVirtual())
@@ -740,27 +763,27 @@ public static class ProfileManager
             UpdateProfileWrapper(profile);
     }
 
-    public static Profile? GetProfileWithDefaultLayout() => profiles.Values.FirstOrDefault(p => p.Layout.IsDefaultLayout);
+    public Profile? GetProfileWithDefaultLayout() => profiles.Values.FirstOrDefault(p => p.Layout.IsDefaultLayout);
 
     #region events
 
-    public static event DeletedEventHandler Deleted;
+    public event DeletedEventHandler Deleted;
 
     public delegate void DeletedEventHandler(Profile profile);
 
-    public static event UpdatedEventHandler Updated;
+    public event UpdatedEventHandler Updated;
 
     public delegate void UpdatedEventHandler(Profile profile, UpdateSource source, bool isCurrent);
 
-    public static event AppliedEventHandler Applied;
+    public event AppliedEventHandler Applied;
 
     public delegate void AppliedEventHandler(Profile profile, UpdateSource source);
 
-    public static event DiscardedEventHandler Discarded;
+    public event DiscardedEventHandler Discarded;
 
     public delegate void DiscardedEventHandler(Profile profile);
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
     public delegate void InitializedEventHandler();
 

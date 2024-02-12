@@ -34,35 +34,84 @@ public partial class ProfilesPage : Page
     public static Profile selectedProfile;
     private static Profile selectedMainProfile;
 
-    private readonly SettingsMode0 page0 = new("SettingsMode0");
-    private readonly SettingsMode1 page1 = new("SettingsMode1");
-
+    private SettingsMode0 page0;
+    private SettingsMode1 page1;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IGPUManager> gPUManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IMotionManager> motionManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
+    private readonly Lazy<ITimerManager> timerManager;
     private LockObject updateLock = new();
 
     private const int UpdateInterval = 500;
     private static Timer UpdateTimer;
 
-    public ProfilesPage(string Tag) : this()
+    public ProfilesPage(string Tag, Lazy<IProfileManager> profileManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPlatformManager> platformManager, 
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IMotionManager> motionManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ILayoutTemplate> layoutTemplate,
+        Lazy<ITimerManager> timerManager) : this(profileManager, powerProfileManager, settingsManager, platformManager, gPUManager, performanceManager, multimediaManager, motionManager, hotkeysManager, inputsManager, controllerManager,layoutTemplate, timerManager)
     {
         this.Tag = Tag;
     }
 
-    public ProfilesPage()
+    public ProfilesPage(
+        Lazy<IProfileManager> profileManager, 
+        Lazy<IPowerProfileManager> powerProfileManager, 
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IMotionManager> motionManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ILayoutTemplate> layoutTemplate,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
-        
+        this.profileManager = profileManager;
+        this.powerProfileManager = powerProfileManager;
+        this.settingsManager = settingsManager;
+        this.platformManager = platformManager;
+        this.gPUManager = gPUManager;
+        this.performanceManager = performanceManager;
+        this.multimediaManager = multimediaManager;
+        this.motionManager = motionManager;
+        this.hotkeysManager = hotkeysManager;
+        this.inputsManager = inputsManager;
+        this.controllerManager = controllerManager;
+        this.layoutTemplate = layoutTemplate;
+        this.timerManager = timerManager;
         // manage events
-        ProfileManager.Deleted += ProfileDeleted;
-        ProfileManager.Updated += ProfileUpdated;
-        ProfileManager.Applied += ProfileApplied;
-        ProfileManager.Initialized += ProfileManagerLoaded;
-        PowerProfileManager.Updated += PowerProfileManager_Updated;
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        MultimediaManager.Initialized += MultimediaManager_Initialized;
-        MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
-        PlatformManager.RTSS.Updated += RTSS_Updated;
-        GPUManager.Initialized += GPUManager_Initialized;
+        profileManager.Value.Deleted += ProfileDeleted;
+        profileManager.Value.Updated += ProfileUpdated;
+        profileManager.Value.Applied += ProfileApplied;
+        profileManager.Value.Initialized += ProfileManagerLoaded;
+        powerProfileManager.Value.Updated += PowerProfileManager_Updated;
+        powerProfileManager.Value.Deleted += PowerProfileManager_Deleted;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        multimediaManager.Value.Initialized += MultimediaManager_Initialized;
+        multimediaManager.Value.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+        platformManager.Value.RTSS.Updated += RTSS_Updated;
+        gPUManager.Value.Initialized += GPUManager_Initialized;
 
         UpdateTimer = new Timer(UpdateInterval);
         UpdateTimer.AutoReset = false;
@@ -72,7 +121,9 @@ public partial class ProfilesPage : Page
         cB_Profiles.Items.SortDescriptions.Add(new SortDescription(string.Empty, ListSortDirection.Descending));
 
         // force call
-        RTSS_Updated(PlatformManager.RTSS.Status);
+        RTSS_Updated(platformManager.Value.RTSS.Status);
+        page0 = new ("SettingsMode0",hotkeysManager,motionManager,inputsManager);
+        page1 = new ("SettingsMode1",motionManager);
     }
 
     private void MultimediaManager_Initialized()
@@ -80,7 +131,7 @@ public partial class ProfilesPage : Page
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+            DesktopScreen desktopScreen = multimediaManager.Value.GetDesktopScreen();
             desktopScreen.screenDividers.ForEach(d => IntegerScalingComboBox.Items.Add(d));
         });
     }
@@ -162,7 +213,7 @@ public partial class ProfilesPage : Page
             switch (status)
             {
                 case PlatformStatus.Ready:
-                    var Processor = PerformanceManager.GetProcessor();
+                    var Processor = performanceManager.Value.GetProcessor();
                     StackProfileFramerate.IsEnabled = true;
                     break;
                 case PlatformStatus.Stalled:
@@ -296,15 +347,15 @@ public partial class ProfilesPage : Page
                         break;
                 }
 
-                Profile profile = new Profile(path);
-                Layout toCloneLayout = ProfileManager.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout;
+                Profile profile = new Profile(path,profileManager);
+                Layout toCloneLayout = profileManager.Value.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout;
                 profile.Layout = toCloneLayout.Clone() as Layout;
                 profile.LayoutTitle = LayoutTemplate.DefaultLayout.Name;
 
                 var exists = false;
 
                 // check on path rather than profile
-                if (ProfileManager.Contains(path))
+                if (profileManager.Value.Contains(path))
                 {
                     var result = Dialog.ShowAsync(
                         string.Format(Properties.Resources.ProfilesPage_AreYouSureOverwrite1, profile.Name),
@@ -327,7 +378,7 @@ public partial class ProfilesPage : Page
                 }
 
                 if (!exists)
-                    ProfileManager.UpdateOrCreateProfile(profile, UpdateSource.Creation);
+                    profileManager.Value.UpdateOrCreateProfile(profile, UpdateSource.Creation);
             }
             catch (Exception ex)
             {
@@ -577,7 +628,7 @@ public partial class ProfilesPage : Page
                 UpdateMotionControlsVisibility();
 
                 // Framerate limit
-                desktopScreen = MultimediaManager.GetDesktopScreen();
+                desktopScreen = multimediaManager.Value.GetDesktopScreen();
                 if (desktopScreen is not null)
                     cB_Framerate.SelectedItem = desktopScreen.GetClosest(selectedProfile.FramerateValue);
 
@@ -607,7 +658,7 @@ public partial class ProfilesPage : Page
                 Toggle_ControllerLayout.IsOn = selectedProfile.LayoutEnabled;
 
                 // power profile
-                PowerProfile powerProfile = PowerProfileManager.GetProfile(selectedProfile.PowerProfile);
+                PowerProfile powerProfile = powerProfileManager.Value.GetProfile(selectedProfile.PowerProfile);
                 powerProfile.Check(this);
 
                 // display warnings
@@ -669,7 +720,7 @@ public partial class ProfilesPage : Page
         // if main profile is not default, occupy sub profiles dropdown list
         if (!selectedMainProfile.Default)
         {
-            foreach (Profile subprofile in ProfileManager.GetSubProfilesFromPath(selectedMainProfile.Path, false))
+            foreach (Profile subprofile in profileManager.Value.GetSubProfilesFromPath(selectedMainProfile.Path, false))
             {
                 cb_SubProfilePicker.Items.Add(subprofile);
 
@@ -705,7 +756,7 @@ public partial class ProfilesPage : Page
         switch (result.Result)
         {
             case ContentDialogResult.Primary:
-                ProfileManager.DeleteProfile(selectedMainProfile);
+                profileManager.Value.DeleteProfile(selectedMainProfile);
                 cB_Profiles.SelectedIndex = 0;
                 break;
         }
@@ -766,7 +817,7 @@ public partial class ProfilesPage : Page
     private void ControllerSettingsButton_Click(object sender, RoutedEventArgs e)
     {
         // prepare layout editor
-        LayoutTemplate layoutTemplate = new(selectedProfile.Layout)
+        LayoutTemplate layoutTemplate = new(selectedProfile.Layout,controllerManager,timerManager)
         {
             Name = selectedProfile.LayoutTitle,
             Description = "Your modified layout for this executable.",
@@ -851,7 +902,7 @@ public partial class ProfilesPage : Page
 
             else // TODO updateUI to show main & sub profile selected
             {
-                Profile mainProfile = ProfileManager.GetProfileForSubProfile(profile);
+                Profile mainProfile = profileManager.Value.GetProfileForSubProfile(profile);
                 cB_Profiles.SelectedItem = mainProfile;
             }
 
@@ -906,7 +957,7 @@ public partial class ProfilesPage : Page
     private void ProfileManagerLoaded()
     {
         // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() => { cB_Profiles.SelectedItem = ProfileManager.GetDefault(); });
+        Application.Current.Dispatcher.BeginInvoke(() => { cB_Profiles.SelectedItem = profileManager.Value.GetDefault(); });
     }
 
     #endregion
@@ -1008,10 +1059,10 @@ public partial class ProfilesPage : Page
         switch (source)
         {
             case UpdateSource.ProfilesPageUpdateOnly: // when renaming main profile, update main profile only but don't apply it
-                ProfileManager.UpdateOrCreateProfile(selectedMainProfile, source);
+                profileManager.Value.UpdateOrCreateProfile(selectedMainProfile, source);
                 break;
             default:
-                ProfileManager.UpdateOrCreateProfile(selectedProfile, source);
+                profileManager.Value.UpdateOrCreateProfile(selectedProfile, source);
                 break;
         }
     }
@@ -1192,7 +1243,7 @@ public partial class ProfilesPage : Page
         newSubProfile.Guid = Guid.NewGuid(); // must be unique
         newSubProfile.IsSubProfile = true;
         newSubProfile.IsFavoriteSubProfile = true;
-        ProfileManager.UpdateOrCreateProfile(newSubProfile);
+        profileManager.Value.UpdateOrCreateProfile(newSubProfile);
         UpdateSubProfiles();
     }
 
@@ -1218,7 +1269,7 @@ public partial class ProfilesPage : Page
         switch (result.Result)
         {
             case ContentDialogResult.Primary:
-                ProfileManager.DeleteSubProfile(subProfile);
+                profileManager.Value.DeleteSubProfile(subProfile);
                 break;
         }
     }

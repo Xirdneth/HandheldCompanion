@@ -34,6 +34,10 @@ namespace HandheldCompanion.Managers
 
         private GamepadWindow _currentWindow;
         private Frame _gamepadFrame;
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<IUISounds> uISounds;
+        private readonly Lazy<IInputsManager> inputsManager;
         private Page _gamepadPage;
         private Timer _gamepadTimer;
 
@@ -50,8 +54,18 @@ namespace HandheldCompanion.Managers
         // key: Page
         private ConcurrentDictionary<object, Control> prevControl = new();
 
-        public UIGamepad(GamepadWindow gamepadWindow, Frame contentFrame)
+        public UIGamepad(
+            GamepadWindow gamepadWindow,
+            Frame contentFrame,
+            Lazy<ISettingsManager> settingsManager,
+            Lazy<IControllerManager> controllerManager,
+            Lazy<IUISounds> uISounds,
+            Lazy<IInputsManager> inputsManager)
         {
+            this.settingsManager = settingsManager;
+            this.controllerManager = controllerManager;
+            this.uISounds = uISounds;
+            this.inputsManager = inputsManager;
             // set current window
             _currentWindow = gamepadWindow;
             _currentWindow.GotFocus += _currentWindow_GotFocus;
@@ -72,17 +86,17 @@ namespace HandheldCompanion.Managers
             _gamepadFrame.Navigated += ContentFrame_Navigated;
 
             // start listening to inputs
-            switch (SettingsManager.GetBoolean("DesktopProfileOnStart"))
+            switch (settingsManager.Value.GetBoolean("DesktopProfileOnStart"))
             {
                 case true:
-                    ControllerManager.InputsUpdated -= InputsUpdated;
+                    controllerManager.Value.InputsUpdated -= InputsUpdated;
                     break;
                 case false:
-                    ControllerManager.InputsUpdated += InputsUpdated;
+                    controllerManager.Value.InputsUpdated += InputsUpdated;
                     break;
             }
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
 
             _gamepadTimer = new Timer(250) { AutoReset = false };
             _gamepadTimer.Elapsed += _gamepadFrame_PageRendered;
@@ -163,14 +177,14 @@ namespace HandheldCompanion.Managers
                 {
                     case "DesktopLayoutEnabled":
                         {
-                            var value = SettingsManager.GetBoolean(name, true);
+                            var value = settingsManager.Value.GetBoolean(name, true);
                             switch (value)
                             {
                                 case true:
-                                    ControllerManager.InputsUpdated -= InputsUpdated;
+                                    controllerManager.Value.InputsUpdated -= InputsUpdated;
                                     break;
                                 case false:
-                                    ControllerManager.InputsUpdated += InputsUpdated;
+                                    controllerManager.Value.InputsUpdated += InputsUpdated;
                                     break;
                             }
                         }
@@ -390,7 +404,7 @@ namespace HandheldCompanion.Managers
                 return;
 
             // stop gamepad navigation when InputsManager is listening
-            if (InputsManager.IsListening)
+            if (inputsManager.Value.IsListening)
                 return;
 
             // get the current time
@@ -468,7 +482,7 @@ namespace HandheldCompanion.Managers
                         case "NavigationViewItem":
                             {
                                 // play sound
-                                UISounds.PlayOggFile(UISounds.Expanded);
+                                uISounds.Value.PlayOggFile(uISounds.Value.Expanded);
 
                                 // set state
                                 _goingForward = true;
@@ -536,7 +550,7 @@ namespace HandheldCompanion.Managers
                                             _goingBack = true;
 
                                             // play sound
-                                            UISounds.PlayOggFile(UISounds.Collapse);
+                                            uISounds.Value.PlayOggFile(uISounds.Value.Collapse);
 
                                             // go back to previous page
                                             if (_gamepadFrame.CanGoBack)

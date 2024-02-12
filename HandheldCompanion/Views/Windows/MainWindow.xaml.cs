@@ -1,4 +1,5 @@
 using HandheldCompanion.Controllers;
+using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -64,6 +65,7 @@ public partial class MainWindow : GamepadWindow
 
     private static MainWindow CurrentWindow;
     public static FileVersionInfo fileVersionInfo;
+    private Assembly? CurrentAssembly;
 
     public static string InstallPath = string.Empty;
     public static string SettingsPath = string.Empty;
@@ -72,6 +74,33 @@ public partial class MainWindow : GamepadWindow
     private bool appClosing;
     private bool IsReady;
     private readonly NotifyIcon notifyIcon;
+    private readonly Lazy<IGPUManager> gPUManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<ILayoutManager> layoutManager;
+    private readonly Lazy<IMotionManager> motionManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IXInputPlus> xInputPlus;
+    private readonly Lazy<ISensorsManager> sensorsManager;
+    private readonly Lazy<IOSDManager> oSDManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IVirtualManager> virtualManager;
+    private readonly Lazy<IDynamicLightingManager> dynamicLightingManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IUISounds> uISounds;
+    private readonly Lazy<IIDevice> iDevice;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<ITaskManager> taskManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<IUpdateManager> updateManager;
+    private readonly Lazy<IDeviceManager> deviceManager;
+    private readonly Lazy<ISystemManager> systemManager;
+    private readonly Lazy<IToastManager> toastManager;
+    private readonly Lazy<ITimerManager> timerManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
     private bool NotifyInTaskbar;
     private string preNavItemTag;
 
@@ -82,11 +111,65 @@ public partial class MainWindow : GamepadWindow
 
     private const int WM_QUERYENDSESSION = 0x0011;
 
-    public MainWindow(FileVersionInfo _fileVersionInfo, Assembly CurrentAssembly)
+    public MainWindow(
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<ILayoutManager> layoutManager,
+        Lazy<IMotionManager> motionManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IXInputPlus> xInputPlus,
+        Lazy<ISensorsManager> sensorsManager,
+        Lazy<IOSDManager> oSDManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IDynamicLightingManager> dynamicLightingManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IUISounds> uISounds,
+        Lazy<IIDevice> iDevice,
+        Lazy<IProcessManager> processManager,
+        Lazy<ITaskManager> taskManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IUpdateManager> updateManager,
+        Lazy<IDeviceManager> deviceManager,
+        Lazy<ISystemManager> systemManager,
+        Lazy<IToastManager> toastManager,
+        Lazy<ITimerManager> timerManager
+        )//Lazy<ILayoutTemplate> layoutTemplate
     {
         InitializeComponent();
-
-        fileVersionInfo = _fileVersionInfo;
+        this.gPUManager = gPUManager;
+        this.powerProfileManager = powerProfileManager;
+        this.profileManager = profileManager;
+        this.performanceManager = performanceManager;
+        this.platformManager = platformManager;
+        this.settingsManager = settingsManager;
+        this.layoutManager = layoutManager;
+        this.motionManager = motionManager;
+        this.hotkeysManager = hotkeysManager;
+        this.xInputPlus = xInputPlus;
+        this.sensorsManager = sensorsManager;
+        this.oSDManager = oSDManager;
+        this.controllerManager = controllerManager;
+        this.virtualManager = virtualManager;
+        this.dynamicLightingManager = dynamicLightingManager;
+        this.multimediaManager = multimediaManager;
+        this.uISounds = uISounds;
+        this.iDevice = iDevice;
+        this.processManager = processManager;
+        this.taskManager = taskManager;
+        this.inputsManager = inputsManager;
+        this.updateManager = updateManager;
+        this.deviceManager = deviceManager;
+        this.systemManager = systemManager;
+        this.toastManager = toastManager;
+        this.timerManager = timerManager;
+        this.layoutTemplate = layoutTemplate;
+        CurrentAssembly = Assembly.GetExecutingAssembly();
+        fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
         CurrentWindow = this;
 
         // used by system manager, controller manager
@@ -127,7 +210,7 @@ public partial class MainWindow : GamepadWindow
         }*/
 
         // get first start
-        bool FirstStart = SettingsManager.GetBoolean("FirstStart");
+        bool FirstStart = settingsManager.Value.GetBoolean("FirstStart");
 
         // define current directory
         InstallPath = AppDomain.CurrentDomain.BaseDirectory;
@@ -141,7 +224,7 @@ public partial class MainWindow : GamepadWindow
         Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
 
         // initialize XInputWrapper
-        XInputPlus.ExtractXInputPlusLibraries();
+        xInputPlus.Value.ExtractXInputPlusLibraries();
 
         // initialize notifyIcon
         notifyIcon = new NotifyIcon
@@ -156,7 +239,7 @@ public partial class MainWindow : GamepadWindow
 
         AddNotifyIconItem(Properties.Resources.MainWindow_MainWindow);
         AddNotifyIconItem(Properties.Resources.MainWindow_QuickTools);
-        
+
         AddNotifyIconSeparator();
 
         AddNotifyIconItem(Properties.Resources.MainWindow_Exit);
@@ -172,7 +255,7 @@ public partial class MainWindow : GamepadWindow
         Title += $" ({fileVersionInfo.FileVersion})";
 
         // initialize device
-        CurrentDevice = IDevice.GetDefault();
+        CurrentDevice = iDevice.Value.GetDefault();
         CurrentDevice.PullSensors();
 
         // workaround for Bosch BMI320/BMI323 (as of 06/20/2023)
@@ -203,7 +286,7 @@ public partial class MainWindow : GamepadWindow
                 {
                     // prevent Steam Deck controller from being hidden by default
                     if (FirstStart)
-                        SettingsManager.SetProperty("HIDcloakonconnect", false);
+                        settingsManager.Value.SetProperty("HIDcloakonconnect", false);
                 }
                 break;
         }
@@ -211,14 +294,14 @@ public partial class MainWindow : GamepadWindow
         // initialize splash screen on first start only
         if (FirstStart)
         {
-            splashScreen = new SplashScreen();
+            splashScreen = new SplashScreen(hotkeysManager);
             splashScreen.Show();
 
-            SettingsManager.SetProperty("FirstStart", false);
+            settingsManager.Value.SetProperty("FirstStart", false);
         }
 
         // initialize UI sounds board
-        UISounds uiSounds = new UISounds();
+        //UISounds uiSounds = new UISounds();
 
         // load window(s)
         loadWindows();
@@ -227,50 +310,51 @@ public partial class MainWindow : GamepadWindow
         loadPages();
 
         // manage events
-        InputsManager.TriggerRaised += InputsManager_TriggerRaised;
-        SystemManager.SystemStatusChanged += OnSystemStatusChanged;
-        DeviceManager.UsbDeviceArrived += GenericDeviceUpdated;
-        DeviceManager.UsbDeviceRemoved += GenericDeviceUpdated;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+        inputsManager.Value.TriggerRaised += InputsManager_TriggerRaised;
+        systemManager.Value.SystemStatusChanged += OnSystemStatusChanged;
+        deviceManager.Value.UsbDeviceArrived += GenericDeviceUpdated;
+        deviceManager.Value.UsbDeviceRemoved += GenericDeviceUpdated;
+        controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
+        virtualManager.Value.ControllerSelected += VirtualManager_ControllerSelected;
 
-        ToastManager.Start();
-        ToastManager.IsEnabled = SettingsManager.GetBoolean("ToastEnable");
+        toastManager.Value.Start();
+        toastManager.Value.IsEnabled = settingsManager.Value.GetBoolean("ToastEnable");
 
         // start static managers in sequence
-        GPUManager.Start();
-        PowerProfileManager.Start();
-        ProfileManager.Start();
-        ControllerManager.Start();
-        HotkeysManager.Start();
-        DeviceManager.Start();
-        OSDManager.Start();
-        LayoutManager.Start();
-        SystemManager.Start();
-        DynamicLightingManager.Start();
-        MultimediaManager.Start();
-        VirtualManager.Start();
-        InputsManager.Start();
-        SensorsManager.Start();
-        TimerManager.Start();
+        gPUManager.Value.Start();
+        powerProfileManager.Value.Start();
+        profileManager.Value.Start();
+        controllerManager.Value.Start();
+        hotkeysManager.Value.Start();
+        deviceManager.Value.Start();
+        oSDManager.Value.Start();
+        layoutManager.Value.Start();
+        systemManager.Value.Start();
+        dynamicLightingManager.Value.Start();
+        multimediaManager.Value.Start();
+        virtualManager.Value.Start();
+        inputsManager.Value.Start();
+        sensorsManager.Value.Start();
+        timerManager.Value.Start();
 
         // todo: improve overall threading logic
-        new Thread(() => { PlatformManager.Start(); }).Start();
-        new Thread(() => { ProcessManager.Start(); }).Start();
-        new Thread(() => { TaskManager.Start(CurrentExe); }).Start();
-        new Thread(() => { PerformanceManager.Start(); }).Start();
-        new Thread(() => { UpdateManager.Start(); }).Start();
+        new Thread(() => { platformManager.Value.Start(); }).Start();
+        new Thread(() => { processManager.Value.Start(); }).Start();
+        new Thread(() => { taskManager.Value.Start(CurrentExe); }).Start();
+        new Thread(() => { performanceManager.Value.Start(); }).Start();
+        new Thread(() => { updateManager.Value.Start(); }).Start();
 
         // start setting last
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        SettingsManager.Start();
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        settingsManager.Value.Start();
 
         // update Position and Size
-        Height = (int)Math.Max(MinHeight, SettingsManager.GetDouble("MainWindowHeight"));
-        Width = (int)Math.Max(MinWidth, SettingsManager.GetDouble("MainWindowWidth"));
-        Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, SettingsManager.GetDouble("MainWindowLeft"));
-        Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, SettingsManager.GetDouble("MainWindowTop"));
-        navView.IsPaneOpen = SettingsManager.GetBoolean("MainWindowIsPaneOpen");
+        Height = (int)Math.Max(MinHeight, settingsManager.Value.GetDouble("MainWindowHeight"));
+        Width = (int)Math.Max(MinWidth, settingsManager.Value.GetDouble("MainWindowWidth"));
+        Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, settingsManager.Value.GetDouble("MainWindowLeft"));
+        Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, settingsManager.Value.GetDouble("MainWindowTop"));
+        navView.IsPaneOpen = settingsManager.Value.GetBoolean("MainWindowIsPaneOpen");
+        
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -380,14 +464,14 @@ public partial class MainWindow : GamepadWindow
         switch (name)
         {
             case "ToastEnable":
-                ToastManager.IsEnabled = Convert.ToBoolean(value);
+                toastManager.Value.IsEnabled = Convert.ToBoolean(value);
                 break;
             case "DesktopProfileOnStart":
-                if (SettingsManager.IsInitialized)
+                if (settingsManager.Value.IsInitialized)
                     break;
 
                 var DesktopLayout = Convert.ToBoolean(value);
-                SettingsManager.SetProperty("DesktopLayoutEnabled", DesktopLayout, false, true);
+                settingsManager.Value.SetProperty("DesktopLayoutEnabled", DesktopLayout, false, true);
                 break;
         }
     }
@@ -418,17 +502,59 @@ public partial class MainWindow : GamepadWindow
     private void loadPages()
     {
         // initialize pages
-        controllerPage = new ControllerPage("controller");
+        controllerPage = new ControllerPage("controller",
+            settingsManager,
+            profileManager,
+            layoutManager,
+            virtualManager,
+            controllerManager,
+            timerManager);
         controllerPage.Loaded += ControllerPage_Loaded;
 
-        devicePage = new DevicePage("device");
-        performancePage = new PerformancePage("performance");
-        profilesPage = new ProfilesPage("profiles");
-        settingsPage = new SettingsPage("settings");
+        devicePage = new DevicePage("device",
+            settingsManager);
+        performancePage = new PerformancePage("performance",
+            settingsManager,
+            powerProfileManager,
+            performanceManager,
+            platformManager,
+            multimediaManager);
+        profilesPage = new ProfilesPage("profiles",
+            profileManager,
+            powerProfileManager,
+            settingsManager,
+            platformManager,
+            gPUManager,
+            performanceManager,
+            multimediaManager,
+            motionManager,
+            hotkeysManager,
+            inputsManager,
+            controllerManager,
+            layoutTemplate,
+            timerManager);
+        settingsPage = new SettingsPage("settings",
+            settingsManager,
+            controllerManager,
+            platformManager,
+            multimediaManager,
+            updateManager);
         aboutPage = new AboutPage("about");
-        overlayPage = new OverlayPage("overlay");
-        hotkeysPage = new HotkeysPage("hotkeys");
-        layoutPage = new LayoutPage("layout", navView);
+        overlayPage = new OverlayPage("overlay",
+            settingsManager,
+            platformManager);
+        hotkeysPage = new HotkeysPage("hotkeys",
+            hotkeysManager);
+        layoutPage = new LayoutPage("layout", navView,
+            settingsManager,
+            profileManager,
+            layoutManager,
+            controllerManager,
+            virtualManager,
+            deviceManager,
+            hotkeysManager,
+            timerManager,
+            inputsManager);
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
@@ -448,9 +574,30 @@ public partial class MainWindow : GamepadWindow
     private void loadWindows()
     {
         // initialize overlay
-        overlayModel = new OverlayModel();
-        overlayTrackpad = new OverlayTrackpad();
-        overlayquickTools = new OverlayQuickTools();
+        overlayModel = new OverlayModel(
+            settingsManager,
+            performanceManager,
+            motionManager,
+            hotkeysManager);
+        overlayTrackpad = new OverlayTrackpad(
+            settingsManager,
+            controllerManager,
+            hotkeysManager);
+        overlayquickTools = new OverlayQuickTools(
+            settingsManager,
+            hotkeysManager,
+            multimediaManager,
+            profileManager,
+            platformManager,
+            powerProfileManager,
+            gPUManager,
+            performanceManager,
+            controllerManager,
+            uISounds,
+            systemManager,
+            inputsManager,
+            processManager,
+            timerManager);
     }
 
     private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
@@ -502,7 +649,11 @@ public partial class MainWindow : GamepadWindow
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         // load gamepad navigation maanger
-        gamepadFocusManager = new(this, ContentFrame);
+        gamepadFocusManager = new(this, ContentFrame, 
+            settingsManager, 
+            controllerManager, 
+            uISounds,
+            inputsManager);
 
         HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
         source.AddHook(WndProc); // Hook into the window's message loop
@@ -518,10 +669,10 @@ public partial class MainWindow : GamepadWindow
             splashScreen.Close();
 
         // home page has loaded, display main window
-        WindowState = SettingsManager.GetBoolean("StartMinimized")
+        WindowState = settingsManager.Value.GetBoolean("StartMinimized")
             ? WindowState.Minimized
-            : (WindowState)SettingsManager.GetInt("MainWindowState");
-        prevWindowState = (WindowState)SettingsManager.GetInt("MainWindowPrevState");
+            : (WindowState)settingsManager.Value.GetInt("MainWindowState");
+        prevWindowState = (WindowState)settingsManager.Value.GetInt("MainWindowPrevState");
 
         IsReady = true;
     }
@@ -582,16 +733,16 @@ public partial class MainWindow : GamepadWindow
                         await Task.Delay(CurrentDevice.ResumeDelay);
 
                         // restore inputs manager
-                        InputsManager.Start();
+                        inputsManager.Value.Start();
 
                         // start timer manager
-                        TimerManager.Start();
+                        timerManager.Value.Start();
 
                         // resume the virtual controller last
-                        VirtualManager.Resume();
+                        virtualManager.Value.Resume();
 
                         // restart IMU
-                        SensorsManager.Resume(true);
+                        sensorsManager.Value.Resume(true);
                     }
 
                     // open device, when ready
@@ -611,16 +762,16 @@ public partial class MainWindow : GamepadWindow
                 // sleep
                 {
                     // stop the virtual controller
-                    VirtualManager.Suspend();
+                    virtualManager.Value.Suspend();
 
                     // stop timer manager
-                    TimerManager.Stop();
+                    timerManager.Value.Stop();
 
                     // stop sensors
-                    SensorsManager.Stop();
+                    sensorsManager.Value.Stop();
 
                     // pause inputs manager
-                    InputsManager.Stop();
+                    inputsManager.Value.Stop();
 
                     // close current device
                     CurrentDevice.Close();
@@ -684,25 +835,25 @@ public partial class MainWindow : GamepadWindow
         overlayTrackpad.Close();
         overlayquickTools.Close(true);
 
-        VirtualManager.Stop();
-        MultimediaManager.Stop();
-        GPUManager.Stop();
-        MotionManager.Stop();
-        SensorsManager.Stop();
-        ControllerManager.Stop();
-        InputsManager.Stop();
-        DeviceManager.Stop();
-        PlatformManager.Stop();
-        OSDManager.Stop();
-        PowerProfileManager.Stop();
-        ProfileManager.Stop();
-        LayoutManager.Stop();
-        SystemManager.Stop();
-        ProcessManager.Stop();
-        ToastManager.Stop();
-        TaskManager.Stop();
-        PerformanceManager.Stop();
-        UpdateManager.Stop();
+        virtualManager.Value.Stop();
+        multimediaManager.Value.Stop();
+        gPUManager.Value.Stop();
+        motionManager.Value.Stop();
+        sensorsManager.Value.Stop();
+        controllerManager.Value.Stop();
+        inputsManager.Value.Stop();
+        deviceManager.Value.Stop();
+        platformManager.Value.Stop();
+        oSDManager.Value.Stop();
+        powerProfileManager.Value.Stop();
+        profileManager.Value.Stop();
+        layoutManager.Value.Stop();
+        systemManager.Value.Stop();
+        processManager.Value.Stop();
+        toastManager.Value.Stop();
+        taskManager.Value.Stop();
+        performanceManager.Value.Stop();
+        updateManager.Value.Stop();
 
         // closing page(s)
         controllerPage.Page_Closed();
@@ -723,26 +874,26 @@ public partial class MainWindow : GamepadWindow
         switch (WindowState)
         {
             case WindowState.Normal:
-                SettingsManager.SetProperty("MainWindowLeft", Left);
-                SettingsManager.SetProperty("MainWindowTop", Top);
-                SettingsManager.SetProperty("MainWindowWidth", ActualWidth);
-                SettingsManager.SetProperty("MainWindowHeight", ActualHeight);
+                settingsManager.Value.SetProperty("MainWindowLeft", Left);
+                settingsManager.Value.SetProperty("MainWindowTop", Top);
+                settingsManager.Value.SetProperty("MainWindowWidth", ActualWidth);
+                settingsManager.Value.SetProperty("MainWindowHeight", ActualHeight);
                 break;
             case WindowState.Maximized:
-                SettingsManager.SetProperty("MainWindowLeft", 0);
-                SettingsManager.SetProperty("MainWindowTop", 0);
-                SettingsManager.SetProperty("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
-                SettingsManager.SetProperty("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
+                settingsManager.Value.SetProperty("MainWindowLeft", 0);
+                settingsManager.Value.SetProperty("MainWindowTop", 0);
+                settingsManager.Value.SetProperty("MainWindowWidth", SystemParameters.MaximizedPrimaryScreenWidth);
+                settingsManager.Value.SetProperty("MainWindowHeight", SystemParameters.MaximizedPrimaryScreenHeight);
 
                 break;
         }
 
-        SettingsManager.SetProperty("MainWindowState", (int)WindowState);
-        SettingsManager.SetProperty("MainWindowPrevState", (int)prevWindowState);
+        settingsManager.Value.SetProperty("MainWindowState", (int)WindowState);
+        settingsManager.Value.SetProperty("MainWindowPrevState", (int)prevWindowState);
 
-        SettingsManager.SetProperty("MainWindowIsPaneOpen", navView.IsPaneOpen);
+        settingsManager.Value.SetProperty("MainWindowIsPaneOpen", navView.IsPaneOpen);
 
-        if (SettingsManager.GetBoolean("CloseMinimises") && !appClosing)
+        if (settingsManager.Value.GetBoolean("CloseMinimises") && !appClosing)
         {
             e.Cancel = true;
             WindowState = WindowState.Minimized;
@@ -760,7 +911,7 @@ public partial class MainWindow : GamepadWindow
 
                 if (!NotifyInTaskbar)
                 {
-                    ToastManager.SendToast(Title, "is running in the background");
+                    toastManager.Value.SendToast(Title, "is running in the background");
                     NotifyInTaskbar = true;
                 }
 

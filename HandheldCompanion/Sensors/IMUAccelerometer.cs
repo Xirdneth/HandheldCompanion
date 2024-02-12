@@ -1,6 +1,7 @@
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using System;
 using System.Numerics;
 using Windows.Devices.Sensors;
 using static HandheldCompanion.Utils.DeviceUtils;
@@ -16,13 +17,15 @@ public class IMUAccelerometer : IMUSensor
         minOut = short.MinValue,
         maxOut = short.MaxValue
     };
+    private readonly Lazy<IMotionManager> motionManager;
 
-    public IMUAccelerometer(SensorFamily sensorFamily, int updateInterval)
+    public IMUAccelerometer(SensorFamily sensorFamily, int updateInterval, Lazy<IMotionManager> motionManager)
     {
         this.sensorFamily = sensorFamily;
         this.updateInterval = updateInterval;
 
         UpdateSensor();
+        this.motionManager = motionManager;
     }
 
     public void UpdateSensor()
@@ -120,9 +123,9 @@ public class IMUAccelerometer : IMUSensor
 
     private void ReadingChanged(Vector3 AccelerationG, Vector3 AngularVelocityDeg)
     {
-        reading.X = (float)filter.axis1Filter.Filter(AccelerationG.X, MotionManager.DeltaSeconds);
-        reading.Y = (float)filter.axis2Filter.Filter(AccelerationG.Y, MotionManager.DeltaSeconds);
-        reading.Z = (float)filter.axis3Filter.Filter(AccelerationG.Z, MotionManager.DeltaSeconds);
+        reading.X = (float)filter.axis1Filter.Filter(AccelerationG.X, motionManager.Value.DeltaSeconds);
+        reading.Y = (float)filter.axis2Filter.Filter(AccelerationG.Y, motionManager.Value.DeltaSeconds);
+        reading.Z = (float)filter.axis3Filter.Filter(AccelerationG.Z, motionManager.Value.DeltaSeconds);
 
         base.ReadingChanged();
     }

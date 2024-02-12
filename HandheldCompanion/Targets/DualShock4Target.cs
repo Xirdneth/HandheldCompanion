@@ -30,26 +30,30 @@ namespace HandheldCompanion.Targets
             minOut = short.MinValue,
             maxOut = short.MaxValue,
         };
-
+        private readonly Lazy<IVirtualManager> virtualManager;
+        private readonly Lazy<ITimerManager> timerManager;
         private DS4_REPORT_EX outDS4Report;
 
         private new IDualShock4Controller virtualController;
 
-        public DualShock4Target() : base()
+        public DualShock4Target(Lazy<IVirtualManager> virtualManager,Lazy<ITimerManager> timerManager) : base()
         {
+            this.virtualManager = virtualManager;
+            this.timerManager = timerManager;
             // initialize controller
             HID = HIDmode.DualShock4Controller;
 
             // create new ViGEm client
             // this shouldn't happen, caused by profile HIDmode logic, fixme!
-            if (VirtualManager.vClient is null)
-                VirtualManager.vClient = new ViGEmClient();
+            if (virtualManager.Value.vClient is null)
+                virtualManager.Value.vClient = new ViGEmClient();
 
-            virtualController = VirtualManager.vClient.CreateDualShock4Controller(0x054C, 0x09CC);
+            virtualController = virtualManager.Value.vClient.CreateDualShock4Controller(0x054C, 0x09CC);
             virtualController.AutoSubmitReport = false;
             virtualController.FeedbackReceived += FeedbackReceived;
 
             LogManager.LogInformation("{0} initialized, {1}", ToString(), virtualController);
+
         }
 
         public override void Connect()
@@ -60,7 +64,7 @@ namespace HandheldCompanion.Targets
             try
             {
                 virtualController.Connect();
-                TimerManager.Tick += UpdateReport;
+                timerManager.Value.Tick += UpdateReport;
 
                 base.Connect();
             }
@@ -79,7 +83,7 @@ namespace HandheldCompanion.Targets
             try
             {
                 virtualController.Disconnect();
-                TimerManager.Tick -= UpdateReport;
+                timerManager.Value.Tick -= UpdateReport;
 
                 base.Disconnect();
             }
@@ -199,7 +203,7 @@ namespace HandheldCompanion.Targets
 
             outDS4Report.bBatteryLvlSpecial = 11;
 
-            outDS4Report.wTimestamp = (ushort)(TimerManager.GetElapsedSeconds());
+            outDS4Report.wTimestamp = (ushort)(timerManager.Value.GetElapsedSeconds());
 
             DS4OutDeviceExtras.CopyBytes(ref outDS4Report, rawOutReportEx);
 

@@ -1,6 +1,8 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -26,15 +28,19 @@ public partial class JoysticksPage : ILayoutPage
     };
 
     public static List<AxisLayoutFlags> RightThumbAxis = new() { AxisLayoutFlags.RightStick };
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    public JoysticksPage()
+    public JoysticksPage(Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
 
         // draw UI
         foreach (ButtonFlags button in LeftThumbButtons)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button, controllerManager, timerManager);
             LeftJoystickButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -42,7 +48,7 @@ public partial class JoysticksPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in LeftThumbAxis)
         {
-            AxisMapping axisMapping = new AxisMapping(axis);
+            AxisMapping axisMapping = new AxisMapping(axis, controllerManager, timerManager);
             LeftJoystickPanel.Children.Add(axisMapping);
 
             AxisMappings.Add(axis, axisMapping);
@@ -50,7 +56,7 @@ public partial class JoysticksPage : ILayoutPage
 
         foreach (ButtonFlags button in RightThumbButtons)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button, controllerManager, timerManager);
             RightJoystickButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -58,7 +64,7 @@ public partial class JoysticksPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in RightThumbAxis)
         {
-            AxisMapping axisMapping = new AxisMapping(axis);
+            AxisMapping axisMapping = new AxisMapping(axis,controllerManager, timerManager);
             RightJoystickPanel.Children.Add(axisMapping);
 
             AxisMappings.Add(axis, axisMapping);
@@ -78,7 +84,8 @@ public partial class JoysticksPage : ILayoutPage
         enabled = leftStick || rightStick;
     }
 
-    public JoysticksPage(string Tag) : this()
+    public JoysticksPage(string Tag,
+        Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         this.Tag = Tag;
     }

@@ -12,22 +12,26 @@ namespace HandheldCompanion.Targets
     internal partial class Xbox360Target : ViGEmTarget
     {
         private new IXbox360Controller virtualController;
+        private readonly Lazy<ITimerManager> timerManager;
+        private readonly Lazy<IVirtualManager> virtualManager;
 
-        public Xbox360Target(ushort vendorId, ushort productId) : base()
+        public Xbox360Target(ushort vendorId, ushort productId, Lazy<ITimerManager> timerManager, Lazy<IVirtualManager> virtualManager) : base()
         {
             // initialize controller
             HID = HIDmode.Xbox360Controller;
 
             // create new ViGEm client
             // this shouldn't happen, caused by profile HIDmode logic, fixme!
-            if (VirtualManager.vClient is null)
-                VirtualManager.vClient = new ViGEmClient();
+            if (virtualManager.Value.vClient is null)
+                virtualManager.Value.vClient = new ViGEmClient();
 
-            virtualController = VirtualManager.vClient.CreateXbox360Controller(vendorId, productId);
+            virtualController = virtualManager.Value.vClient.CreateXbox360Controller(vendorId, productId);
             virtualController.AutoSubmitReport = false;
             virtualController.FeedbackReceived += FeedbackReceived;
 
             LogManager.LogInformation("{0} initialized, {1}", ToString(), virtualController);
+            this.timerManager = timerManager;
+            this.virtualManager = virtualManager;
         }
 
         public override void Connect()
@@ -38,7 +42,7 @@ namespace HandheldCompanion.Targets
             try
             {
                 virtualController.Connect();
-                TimerManager.Tick += UpdateReport;
+                timerManager.Value.Tick += UpdateReport;
 
                 base.Connect();
             }
@@ -57,7 +61,7 @@ namespace HandheldCompanion.Targets
             try
             {
                 virtualController.Disconnect();
-                TimerManager.Tick -= UpdateReport;
+                timerManager.Value.Tick -= UpdateReport;
 
                 base.Disconnect();
             }

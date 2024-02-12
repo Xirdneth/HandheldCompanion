@@ -20,7 +20,7 @@ using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
-public static class ProcessManager
+public class ProcessManager : IProcessManager
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -31,24 +31,39 @@ public static class ProcessManager
     public static extern bool IsWindowVisible(int h);
 
     // process vars
-    private static readonly Timer ForegroundTimer;
-    private static readonly Timer ProcessWatcher;
+    private readonly Timer ForegroundTimer;
+    private readonly Timer ProcessWatcher;
 
-    private static readonly ConcurrentDictionary<int, ProcessEx> Processes = new();
-    private static ProcessEx foregroundProcess;
-    private static ProcessEx previousProcess;
+    private readonly ConcurrentDictionary<int, ProcessEx> Processes = new();
+    private ProcessEx foregroundProcess;
+    private ProcessEx previousProcess;
 
-    private static bool IsInitialized;
+    public bool IsInitialized { get; set; }
 
-    public static readonly ProcessEx Empty = new()
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IProcessManager> processManager;
+
+    public ProcessEx Empty
     {
-        Path = string.Empty,
-        Executable = string.Empty,
-        Platform = PlatformType.Windows,
-        Filter = ProcessFilter.Ignored
-    };
+        get
+        {
+            return GetEmptyProcessEx();
+        }
+    }
 
-    static ProcessManager()
+    public ProcessEx GetEmptyProcessEx()
+    {
+        return new ProcessEx()
+        {
+            Path = string.Empty,
+            Executable = string.Empty,
+            Platform = PlatformType.Windows,
+            Filter = ProcessFilter.Ignored
+        };
+    }
+
+    public ProcessManager(Lazy<IPerformanceManager> performanceManager, Lazy<IPlatformManager> platformManager, Lazy<IProcessManager> processManager)
     {
         // hook: on window opened
         Automation.AddAutomationEventHandler(
@@ -62,9 +77,12 @@ public static class ProcessManager
 
         ProcessWatcher = new Timer(2000);
         ProcessWatcher.Elapsed += ProcessWatcher_Elapsed;
+        this.performanceManager = performanceManager;
+        this.platformManager = platformManager;
+        this.processManager = processManager;
     }
 
-    private static void OnWindowOpened(object sender, AutomationEventArgs automationEventArgs)
+    private void OnWindowOpened(object sender, AutomationEventArgs automationEventArgs)
     {
         try
         {
@@ -82,7 +100,7 @@ public static class ProcessManager
         }
     }
 
-    private static bool OnWindowDiscovered(IntPtr hWnd, int lparam)
+    private bool OnWindowDiscovered(IntPtr hWnd, int lparam)
     {
         if (IsWindowVisible((int)hWnd))
         {
@@ -96,7 +114,7 @@ public static class ProcessManager
         return true;
     }
 
-    public static void Start()
+    public void Start()
     {
         // list all current windows
         EnumWindows(OnWindowDiscovered, 0);
@@ -111,7 +129,7 @@ public static class ProcessManager
         LogManager.LogInformation("{0} has started", "ProcessManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
@@ -125,40 +143,40 @@ public static class ProcessManager
         LogManager.LogInformation("{0} has stopped", "ProcessManager");
     }
 
-    public static ProcessEx GetForegroundProcess()
+    public ProcessEx GetForegroundProcess()
     {
         return foregroundProcess;
     }
 
-    public static ProcessEx GetLastSuspendedProcess()
+    public ProcessEx GetLastSuspendedProcess()
     {
         return Processes.Values.LastOrDefault(item => item.IsSuspended);
     }
 
-    public static ProcessEx GetProcess(int processId)
+    public ProcessEx GetProcess(int processId)
     {
         if (Processes.TryGetValue(processId, out var process))
             return process;
         return null;
     }
 
-    public static bool HasProcess(int pId)
+    public bool HasProcess(int pId)
     {
         return Processes.ContainsKey(pId);
     }
 
-    public static List<ProcessEx> GetProcesses()
+    public List<ProcessEx> GetProcesses()
     {
         return Processes.Values.ToList();
     }
 
-    public static List<ProcessEx> GetProcesses(string executable)
+    public List<ProcessEx> GetProcesses(string executable)
     {
         return Processes.Values.Where(a => a.Executable.Equals(executable, StringComparison.InvariantCultureIgnoreCase))
             .ToList();
     }
 
-    private static void ForegroundCallback(object? sender, EventArgs e)
+    private void ForegroundCallback(object? sender, EventArgs e)
     {
         IntPtr hWnd = GetforegroundWindow();
 
@@ -215,7 +233,7 @@ public static class ProcessManager
         }
     }
 
-    private static void ProcessHalted(object? sender, EventArgs e)
+    private void ProcessHalted(object? sender, EventArgs e)
     {
         int processId = ((Process)sender).Id;
 
@@ -239,7 +257,7 @@ public static class ProcessManager
         processEx.Dispose();
     }
 
-    private static bool CreateProcess(int ProcessID, int NativeWindowHandle = 0, bool OnStartup = false)
+    private bool CreateProcess(int ProcessID, int NativeWindowHandle = 0, bool OnStartup = false)
     {
         try
         {
@@ -271,7 +289,7 @@ public static class ProcessManager
             Application.Current.Dispatcher.Invoke(() =>
             {
                 // create process
-                processEx = new ProcessEx(proc, path, exec, filter);
+                processEx = new ProcessEx(proc, path, exec, filter, processManager);
                 // processEx.MainWindowTitle = ProcessUtils.GetWindowTitle(hWnd);
             });
 
@@ -281,7 +299,7 @@ public static class ProcessManager
             processEx.MainWindowHandle = hWnd;
             processEx.MainThread = GetMainThread(proc);
             processEx.MainThread.Disposed += (sender, e) => processEx.MainThreadDisposed();
-            processEx.Platform = PlatformManager.GetPlatform(proc);
+            processEx.Platform = platformManager.Value.GetPlatform(proc);
 
             Processes.TryAdd(ProcessID, processEx);
 
@@ -303,7 +321,7 @@ public static class ProcessManager
         return false;
     }
 
-    private static ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "")
+    private ProcessFilter GetFilter(string exec, string path, string MainWindowTitle = "")
     {
         if (string.IsNullOrEmpty(path))
             return ProcessFilter.Restricted;
@@ -380,7 +398,7 @@ public static class ProcessManager
         }
     }
 
-    public static ProcessThread GetMainThread(Process process)
+    public ProcessThread GetMainThread(Process process)
     {
         ProcessThread mainThread = null;
         var startTime = DateTime.MaxValue;
@@ -417,7 +435,7 @@ public static class ProcessManager
         return mainThread;
     }
 
-    private static void ProcessWatcher_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    private void ProcessWatcher_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
         Parallel.ForEach(Processes,
             new ParallelOptions { MaxDegreeOfParallelism = PerformanceManager.MaxDegreeOfParallelism }, process =>
@@ -427,7 +445,7 @@ public static class ProcessManager
             });
     }
 
-    public static void ResumeProcess(ProcessEx processEx)
+    public void ResumeProcess(ProcessEx processEx)
     {
         // process has exited
         if (processEx.Process.HasExited)
@@ -449,7 +467,7 @@ public static class ProcessManager
         ProcessUtils.ShowWindow(processEx.MainWindowHandle, (int)ProcessUtils.ShowWindowCommands.Restored);
     }
 
-    public static void SuspendProcess(ProcessEx processEx)
+    public void SuspendProcess(ProcessEx processEx)
     {
         // process has exited
         if (processEx.Process.HasExited)
@@ -472,7 +490,7 @@ public static class ProcessManager
     }
 
     // A function that takes a Process as a parameter and returns true if it has any xinput related dlls in its modules
-    public static bool CheckXInput(Process process)
+    public bool CheckXInput(Process process)
     {
         // Loop through the modules of the process
         foreach (ProcessModule module in process.Modules)
@@ -494,19 +512,19 @@ public static class ProcessManager
 
     #region events
 
-    public static event ForegroundChangedEventHandler ForegroundChanged;
+    public event ForegroundChangedEventHandler ForegroundChanged;
 
     public delegate void ForegroundChangedEventHandler(ProcessEx processEx, ProcessEx backgroundEx);
 
-    public static event ProcessStartedEventHandler ProcessStarted;
+    public event ProcessStartedEventHandler ProcessStarted;
 
     public delegate void ProcessStartedEventHandler(ProcessEx processEx, bool OnStartup);
 
-    public static event ProcessStoppedEventHandler ProcessStopped;
+    public event ProcessStoppedEventHandler ProcessStopped;
 
     public delegate void ProcessStoppedEventHandler(ProcessEx processEx);
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
     public delegate void InitializedEventHandler();
 

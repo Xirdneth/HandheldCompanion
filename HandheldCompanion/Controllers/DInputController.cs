@@ -1,4 +1,6 @@
-﻿using SharpDX.DirectInput;
+﻿using HandheldCompanion.Managers;
+using SharpDX.DirectInput;
+using System;
 
 namespace HandheldCompanion.Controllers;
 
@@ -7,11 +9,15 @@ public class DInputController : IController
     public Joystick joystick;
     protected JoystickState State = new();
 
-    public DInputController()
+    public DInputController(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IControllerManager> controllerManager) :base(settingsManager, controllerManager)
     {
     }
 
-    public DInputController(Joystick joystick, PnPDetails details)
+    public DInputController(Joystick joystick, PnPDetails details,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager) : this(settingsManager, controllerManager)
     {
         if (joystick is null)
             return;

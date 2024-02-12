@@ -1,5 +1,7 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Simulators;
+using Newtonsoft.Json;
 using System;
 using System.ComponentModel;
 using System.Numerics;
@@ -57,7 +59,7 @@ namespace HandheldCompanion.Actions
         public bool AxisRotated = false;
         public bool AxisInverted = false;
 
-        public MouseActions()
+        public MouseActions(Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager):base(controllerManager,timerManager)
         {
             this.actionType = ActionType.Mouse;
 
@@ -67,7 +69,23 @@ namespace HandheldCompanion.Actions
             mouseFilter = new(FilterCutoff, FilterBeta);
         }
 
-        public MouseActions(MouseActionsType type) : this()
+        [JsonConstructor]
+        public MouseActions() : base()
+        {
+            this.actionType = ActionType.Mouse;
+
+            this.Value = false;
+            this.prevValue = false;
+
+            mouseFilter = new(FilterCutoff, FilterBeta);
+        }
+
+        public MouseActions(MouseActionsType type, IControllerManager controllerManager, ITimerManager timerManager) : base(controllerManager, timerManager)
+        {
+            this.MouseType = type;
+        }
+
+        public MouseActions(MouseActionsType type, Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
         {
             this.MouseType = type;
         }

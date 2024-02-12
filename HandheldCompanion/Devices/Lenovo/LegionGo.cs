@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Actions;
+using HandheldCompanion.Controls;
 using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
@@ -97,17 +98,26 @@ public class LegionGo : IDevice
             });
 
     public const byte INPUT_HID_ID = 0x04;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
     public override bool IsOpen => hidDevices.ContainsKey(INPUT_HID_ID) && hidDevices[INPUT_HID_ID].IsOpen;
 
     public static int LeftJoyconIndex = 3;
     public static int RightJoyconIndex = 4;
-
-    public LegionGo()
+    public LegionGo(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ISystemManager> systemManager,
+        Lazy<ITimerManager> timerManager) : base(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager)
     {
         // device specific settings
         ProductIllustration = "device_legion_go";
-
+        this.powerProfileManager = powerProfileManager;
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
         // used to monitor OEM specific inputs
         _vid = 0x17EF;
         _pid = 0x6182;
@@ -184,7 +194,7 @@ public class LegionGo : IDevice
             TDPOverrideValues = new[] { 20.0d, 20.0d, 20.0d }
         });
 
-        PowerProfileManager.Applied += PowerProfileManager_Applied;
+        powerProfileManager.Value.Applied += PowerProfileManager_Applied;
 
         OEMChords.Add(new DeviceChord("LegionR",
             new List<KeyCode>(), new List<KeyCode>(),
@@ -197,19 +207,17 @@ public class LegionGo : IDevice
         ));
 
         // device specific layout
-        DefaultLayout.AxisLayout[AxisLayoutFlags.RightPad] = new MouseActions {MouseType = MouseActionsType.Move, Filtering = true, Sensivity = 15 };
+        DefaultLayout.AxisLayout[AxisLayoutFlags.RightPad] = new MouseActions(controllerManager,timerManager) {MouseType = MouseActionsType.Move, Filtering = true, Sensivity = 15 };
 
-        DefaultLayout.ButtonLayout[ButtonFlags.RightPadClick] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.LeftButton, HapticMode = HapticMode.Down, HapticStrength = HapticStrength.Low } };
-        DefaultLayout.ButtonLayout[ButtonFlags.RightPadClickDown] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.RightButton, HapticMode = HapticMode.Down, HapticStrength = HapticStrength.High } };
-        DefaultLayout.ButtonLayout[ButtonFlags.B5] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.R1 } };
-        DefaultLayout.ButtonLayout[ButtonFlags.B6] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.MiddleButton } };
-        DefaultLayout.ButtonLayout[ButtonFlags.B7] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.ScrollUp } };
-        DefaultLayout.ButtonLayout[ButtonFlags.B8] = new List<IActions>() { new MouseActions { MouseType = MouseActionsType.ScrollDown } };
+        DefaultLayout.ButtonLayout[ButtonFlags.RightPadClick] = new List<IActions>() { new MouseActions(controllerManager, timerManager) { MouseType = MouseActionsType.LeftButton, HapticMode = HapticMode.Down, HapticStrength = HapticStrength.Low } };
+        DefaultLayout.ButtonLayout[ButtonFlags.RightPadClickDown] = new List<IActions>() { new MouseActions(controllerManager, timerManager) { MouseType = MouseActionsType.RightButton, HapticMode = HapticMode.Down, HapticStrength = HapticStrength.High } };
+        DefaultLayout.ButtonLayout[ButtonFlags.B5] = new List<IActions>() { new ButtonActions(controllerManager, timerManager) { Button = ButtonFlags.R1 } };
+        DefaultLayout.ButtonLayout[ButtonFlags.B6] = new List<IActions>() { new MouseActions(controllerManager, timerManager) { MouseType = MouseActionsType.MiddleButton } };
+        DefaultLayout.ButtonLayout[ButtonFlags.B7] = new List<IActions>() { new MouseActions(controllerManager, timerManager) { MouseType = MouseActionsType.ScrollUp } };
+        DefaultLayout.ButtonLayout[ButtonFlags.B8] = new List<IActions>() { new MouseActions(controllerManager, timerManager) { MouseType = MouseActionsType.ScrollDown } };
 
         Init();
-
-        Task<bool> task = Task.Run(async () => await GetFanFullSpeedAsync());
-        bool FanFullSpeed = task.Result;
+ 
     }
 
     private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
@@ -261,7 +269,7 @@ public class LegionGo : IDevice
         lightProfileR = GetCurrentLightProfile(4);
 
         // Legion XInput controller and other Legion devices shares the same USBHUB
-        while (ControllerManager.PowerCyclers.Count > 0)
+        while (controllerManager.Value.PowerCyclers.Count > 0)
             Thread.Sleep(500);
 
         return true;

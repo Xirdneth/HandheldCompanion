@@ -52,7 +52,7 @@ public abstract class IPlatform : IDisposable
     protected int MaxTentative = 3;
 
     protected List<string> Modules = new();
-    protected string Name;
+    public string Name;
 
     public PlatformType PlatformType;
 

@@ -12,22 +12,23 @@ using System.Windows.Controls.Primitives;
 
 namespace HandheldCompanion.UI
 {
-    public class UISounds
+    public class UISounds : IUISounds
     {
-        private static string appFolder = string.Empty;
-        private static Timer soundTimer;
-        private static string audioFilePath;
+        private string appFolder = string.Empty;
+        private Timer soundTimer;
+        private string audioFilePath;
 
-        public const string Expanded = "drop_001";
-        public const string Collapse = "drop_002";
+        public string Expanded { get; } = "drop_001";
+        public string Collapse { get; } = "drop_002";
         public const string Focus = "bong_001";
         public const string Click = "bong_001";
         public const string ToggleOn = "switch_004";
         public const string ToggleOff = "switch_005";
         public const string Select = "switch_007";
         public const string Slide = "glitch_004";
+        private readonly Lazy<ISettingsManager> settingsManager;
 
-        static UISounds()
+        public UISounds(Lazy<ISettingsManager> settingsManager)
         {
             // Get the current application folder
             appFolder = AppDomain.CurrentDomain.BaseDirectory;
@@ -46,9 +47,10 @@ namespace HandheldCompanion.UI
             EventManager.RegisterClassHandler(typeof(RadioButtons), RadioButtons.SelectionChangedEvent, new RoutedEventHandler(OnSelect));
             EventManager.RegisterClassHandler(typeof(Expander), Expander.ExpandedEvent, new RoutedEventHandler(OnExpand));
             EventManager.RegisterClassHandler(typeof(Expander), Expander.CollapsedEvent, new RoutedEventHandler(OnExpand));
+            this.settingsManager = settingsManager;
         }
 
-        private static async void SoundTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        private async void SoundTimer_Elapsed(object? sender, ElapsedEventArgs e)
         {
             using (VorbisWaveReader waveReader = new VorbisWaveReader(audioFilePath))
             {
@@ -64,7 +66,7 @@ namespace HandheldCompanion.UI
             }
         }
 
-        private static void OnExpand(object sender, RoutedEventArgs e)
+        private void OnExpand(object sender, RoutedEventArgs e)
         {
             Expander uIElement = (Expander)sender;
             if (!uIElement.IsVisible)
@@ -81,8 +83,8 @@ namespace HandheldCompanion.UI
             }
         }
 
-        private static UIElement prevElement;
-        private static void OnFocus(object sender, RoutedEventArgs e)
+        private UIElement prevElement;
+        private void OnFocus(object sender, RoutedEventArgs e)
         {
             UIElement uIElement = (UIElement)sender;
             if (!uIElement.IsFocused || !uIElement.Focusable || !uIElement.IsVisible)
@@ -99,14 +101,14 @@ namespace HandheldCompanion.UI
                     if (prevElement != null && prevElement is ComboBox)
                     {
                         // ComboBox was opened
-                        sound = UISounds.Expanded;
+                        sound = this.Expanded;
                     }
                     break;
                 case "ComboBox":
                     if (prevElement != null && prevElement is ComboBoxItem)
                     {
                         // ComboBox was closed
-                        sound = UISounds.Collapse;
+                        sound = this.Collapse;
                     }
                     break;
             }
@@ -116,7 +118,7 @@ namespace HandheldCompanion.UI
             PlayOggFile(sound);
         }
 
-        private static void OnSelect(object sender, RoutedEventArgs e)
+        private void OnSelect(object sender, RoutedEventArgs e)
         {
             UIElement uIElement = (UIElement)sender;
             if (!uIElement.IsVisible)
@@ -125,7 +127,7 @@ namespace HandheldCompanion.UI
             PlayOggFile(UISounds.Select);
         }
 
-        private static void OnClick(object sender, RoutedEventArgs e)
+        private void OnClick(object sender, RoutedEventArgs e)
         {
             UIElement uIElement = (UIElement)sender;
             if (!uIElement.IsVisible)
@@ -134,7 +136,7 @@ namespace HandheldCompanion.UI
             PlayOggFile(UISounds.Focus);
         }
 
-        private static void OnCheck(object sender, RoutedEventArgs e)
+        private void OnCheck(object sender, RoutedEventArgs e)
         {
             CheckBox uIElement = (CheckBox)sender;
             if (!uIElement.IsLoaded || !uIElement.IsVisible)
@@ -151,7 +153,7 @@ namespace HandheldCompanion.UI
             }
         }
 
-        private static void OnToggle(object sender, RoutedEventArgs e)
+        private void OnToggle(object sender, RoutedEventArgs e)
         {
             ToggleSwitch uIElement = (ToggleSwitch)sender;
             if (!uIElement.IsLoaded || !uIElement.IsVisible)
@@ -168,7 +170,7 @@ namespace HandheldCompanion.UI
             }
         }
 
-        private static void OnSlide(object sender, RoutedEventArgs e)
+        private void OnSlide(object sender, RoutedEventArgs e)
         {
             Control uIElement = (Control)sender;
             if (!uIElement.IsLoaded || !uIElement.IsVisible)
@@ -177,9 +179,9 @@ namespace HandheldCompanion.UI
             PlayOggFile(UISounds.Slide);
         }
 
-        public static void PlayOggFile(string fileName)
+        public void PlayOggFile(string fileName)
         {
-            bool Enabled = SettingsManager.GetBoolean("UISounds");
+            bool Enabled = settingsManager.Value.GetBoolean("UISounds");
             if (!Enabled)
                 return;
 
@@ -189,7 +191,7 @@ namespace HandheldCompanion.UI
                 return;
 
             // update file path
-            UISounds.audioFilePath = audioFilePath;
+            this.audioFilePath = audioFilePath;
 
             // reset timer
             soundTimer.Stop();

@@ -25,7 +25,7 @@ namespace HandheldCompanion.Controls.Hints
 
         public Hint_RogAllyServiceCheck() : base()
         {
-            if (MainWindow.CurrentDevice is not ROGAlly)
+            //if (MainWindow.CurrentDevice is not ROGAlly)
                 return;
 
             // Get all the services installed on the local computer

@@ -1,4 +1,5 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using System;
 using System.Numerics;
@@ -19,13 +20,23 @@ namespace HandheldCompanion.Actions
         public bool AxisRotated = false;
         public bool AxisInverted = false;
 
-        public AxisActions()
+        public AxisActions(
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager):base(controllerManager,timerManager)
         {
             this.actionType = ActionType.Joystick;
             this.Value = new Vector2();
         }
 
-        public AxisActions(AxisLayoutFlags axis) : this()
+        public AxisActions() : base()
+        {
+            this.actionType = ActionType.Joystick;
+            this.Value = new Vector2();
+        }
+
+        public AxisActions(AxisLayoutFlags axis,
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
         {
             this.Axis = axis;
         }

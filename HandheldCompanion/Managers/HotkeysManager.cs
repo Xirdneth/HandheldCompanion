@@ -16,11 +16,10 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using Windows.System;
 using static HandheldCompanion.Managers.InputsHotkey;
-using static HandheldCompanion.Managers.InputsManager;
 
 namespace HandheldCompanion.Managers;
 
-public static class HotkeysManager
+public class HotkeysManager : IHotkeysManager
 {
     public delegate void CommandExecutedEventHandler(string listener);
 
@@ -33,50 +32,79 @@ public static class HotkeysManager
     public delegate void InitializedEventHandler();
 
     private const short PIN_LIMIT = 18;
-    private static readonly string InstallPath;
-    private static bool hasProfileHID = false;
-    public static SortedDictionary<ushort, Hotkey> Hotkeys = new();
+    private readonly string InstallPath;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IVirtualManager> virtualManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<IToastManager> toastManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private bool hasProfileHID = false;
+    public SortedDictionary<ushort, Hotkey> Hotkeys { get; set; } = new();
 
-    private static bool IsInitialized;
+    private bool IsInitialized;
 
-    static HotkeysManager()
+    public HotkeysManager(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IProfileManager> profileManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IProcessManager> processManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IToastManager> toastManager,
+        Lazy<IHotkeysManager> hotkeysManager)
     {
+        this.settingsManager = settingsManager;
+        this.profileManager = profileManager;
+        this.controllerManager = controllerManager;
+        this.virtualManager = virtualManager;
+        this.multimediaManager = multimediaManager;
+        this.processManager = processManager;
+        this.inputsManager = inputsManager;
+        this.toastManager = toastManager;
+        this.hotkeysManager = hotkeysManager;
+
         // initialize path
         InstallPath = Path.Combine(MainWindow.SettingsPath, "hotkeys");
         if (!Directory.Exists(InstallPath))
             Directory.CreateDirectory(InstallPath);
+ 
+        inputsManager.Value.TriggerUpdated += TriggerUpdated;
+        inputsManager.Value.TriggerRaised += TriggerRaised;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
+        controllerManager.Value.ControllerPlugged += ControllerManager_ControllerPlugged;
+        controllerManager.Value.ControllerUnplugged += ControllerManager_ControllerUnplugged;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        virtualManager.Value.ControllerSelected += VirtualManager_ControllerSelected;
 
-        InputsManager.TriggerUpdated += TriggerUpdated;
-        InputsManager.TriggerRaised += TriggerRaised;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        ControllerManager.ControllerPlugged += ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
     }
 
-    public static event HotkeyTypeCreatedEventHandler HotkeyTypeCreated;
+    public event HotkeyTypeCreatedEventHandler HotkeyTypeCreated;
 
-    public static event HotkeyCreatedEventHandler HotkeyCreated;
+    public event HotkeyCreatedEventHandler HotkeyCreated;
 
-    public static event HotkeyUpdatedEventHandler HotkeyUpdated;
+    public event HotkeyUpdatedEventHandler HotkeyUpdated;
 
-    public static event CommandExecutedEventHandler CommandExecuted;
+    public event CommandExecutedEventHandler CommandExecuted;
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
-    private static void ControllerManager_ControllerSelected(IController Controller)
+    private void ControllerManager_ControllerSelected(IController Controller)
     {
         foreach (var hotkey in Hotkeys.Values)
             hotkey.ControllerSelected(Controller);
     }
 
-    private static void ControllerManager_ControllerPlugged(IController Controller, bool IsPowerCycling)
+    private void ControllerManager_ControllerPlugged(IController Controller, bool IsPowerCycling)
     {
         // when the target emulated controller is Dualshock
         // only enable HIDmode switch hotkey when controller is plugged (last stage of HIDmode change in this case)
-        var targetHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+        var targetHIDmode = (HIDmode)settingsManager.Value.GetInt("HIDmode", true);
         if (targetHIDmode == HIDmode.DualShock4Controller)
         {
             var hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode"));
@@ -87,11 +115,11 @@ public static class HotkeysManager
         }
     }
 
-    private static void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling)
+    private void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling)
     {
         // when the target emulated controller is Xbox Controller
         // only enable HIDmode switch hotkey when controller is unplugged (last stage of HIDmode change in this case)
-        var targetHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+        var targetHIDmode = (HIDmode)settingsManager.Value.GetInt("HIDmode", true);
 
         if (targetHIDmode == HIDmode.Xbox360Controller)
         {
@@ -103,7 +131,7 @@ public static class HotkeysManager
         }
     }
 
-    private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
         // check if profile-specific HIDmode -> disable emulated controller hotkey, else -> enable it
         HIDmode HIDmode;
@@ -120,7 +148,7 @@ public static class HotkeysManager
 
             default: // Default
                 {
-                    HIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true); // Applies default HID from settings
+                    HIDmode = (HIDmode)settingsManager.Value.GetInt("HIDmode", true); // Applies default HID from settings
                     hasProfileHID = false;
                     break;
                 }
@@ -141,7 +169,7 @@ public static class HotkeysManager
         }
     }
 
-    private static void VirtualManager_ControllerSelected(HIDmode HIDmode)
+    private void VirtualManager_ControllerSelected(HIDmode HIDmode)
     {
         // change glyph of shortcutChangeHIDMode to the corresponding target emulated controller
         var hotkeys = Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode"));
@@ -165,7 +193,7 @@ public static class HotkeysManager
     }
 
 
-    public static void Start()
+    public void Start()
     {
         // process hotkeys types
         foreach (var type in (InputsHotkeyType[])Enum.GetValues(typeof(InputsHotkeyType)))
@@ -188,7 +216,8 @@ public static class HotkeysManager
             // no hotkey found or failed parsing
             if (hotkey is null)
             {
-                hotkey = new Hotkey(Id);
+                //TODO: Find How to pass Lazy injection as this
+                hotkey = new Hotkey(Id, hotkeysManager, controllerManager, inputsManager);
                 hotkey.IsPinned = inputsHotkey.DefaultPinned;
             }
 
@@ -208,11 +237,11 @@ public static class HotkeysManager
         {
             hotkey.Listening += StartListening;
             hotkey.Pinning += PinOrUnpinHotkey;
-            hotkey.Summoned += hotkey => InvokeTrigger(hotkey, false, true);
+            hotkey.Summoned += hotkey => inputsManager.Value.InvokeTrigger(hotkey, false, true);
             hotkey.Updated += hotkey => SerializeHotkey(hotkey, true);
 
             if (!string.IsNullOrEmpty(hotkey.inputsHotkey.Settings))
-                hotkey.IsEnabled = SettingsManager.GetBoolean(hotkey.inputsHotkey.Settings);
+                hotkey.IsEnabled = settingsManager.Value.GetBoolean(hotkey.inputsHotkey.Settings);
 
             HotkeyCreated?.Invoke(hotkey);
         }
@@ -223,22 +252,22 @@ public static class HotkeysManager
         LogManager.LogInformation("{0} has started", "HotkeysManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
 
         IsInitialized = false;
 
-        ControllerManager.ControllerPlugged -= ControllerManager_ControllerPlugged;
-        ControllerManager.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
-        ProfileManager.Applied -= ProfileManager_Applied;
-        VirtualManager.ControllerSelected -= VirtualManager_ControllerSelected;
+        controllerManager.Value.ControllerPlugged -= ControllerManager_ControllerPlugged;
+        controllerManager.Value.ControllerUnplugged -= ControllerManager_ControllerUnplugged;
+        profileManager.Value.Applied -= ProfileManager_Applied;
+        virtualManager.Value.ControllerSelected -= VirtualManager_ControllerSelected;
 
         LogManager.LogInformation("{0} has stopped", "HotkeysManager");
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value)
     {
         // manage toggle type hotkeys
         foreach (var hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals(name)))
@@ -253,18 +282,18 @@ public static class HotkeysManager
         // manage settings type hotkeys
         foreach (var hotkey in Hotkeys.Values.Where(item => item.inputsHotkey.Settings.Contains(name)))
         {
-            var enabled = SettingsManager.GetBoolean(hotkey.inputsHotkey.Settings);
+            var enabled = settingsManager.Value.GetBoolean(hotkey.inputsHotkey.Settings);
             hotkey.IsEnabled = enabled;
         }
     }
 
-    private static void StartListening(Hotkey hotkey, ListenerType type)
+    private void StartListening(Hotkey hotkey, InputsManager.ListenerType type)
     {
-        InputsManager.StartListening(hotkey, type);
+        inputsManager.Value.StartListening(hotkey, type);
         hotkey.StartListening(type);
     }
 
-    private static void PinOrUnpinHotkey(Hotkey hotkey)
+    private void PinOrUnpinHotkey(Hotkey hotkey)
     {
         switch (hotkey.IsPinned)
         {
@@ -293,12 +322,12 @@ public static class HotkeysManager
         SerializeHotkey(hotkey, true);
     }
 
-    private static int CountPinned()
+    private int CountPinned()
     {
         return Hotkeys.Values.Count(item => item.IsPinned);
     }
 
-    private static void TriggerUpdated(string listener, InputsChord inputs, ListenerType type)
+    private void TriggerUpdated(string listener, InputsChord inputs, InputsManager.ListenerType type)
     {
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
@@ -317,7 +346,7 @@ public static class HotkeysManager
         });
     }
 
-    private static Hotkey ProcessHotkey(string fileName)
+    private Hotkey ProcessHotkey(string fileName)
     {
         Hotkey hotkey = null;
         try
@@ -333,7 +362,7 @@ public static class HotkeysManager
         return hotkey;
     }
 
-    public static void SerializeHotkey(Hotkey hotkey, bool overwrite = false)
+    public void SerializeHotkey(Hotkey hotkey, bool overwrite = false)
     {
         var listener = hotkey.inputsHotkey.Listener;
 
@@ -349,7 +378,7 @@ public static class HotkeysManager
         HotkeyUpdated?.Invoke(hotkey);
     }
 
-    public static void TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
+    public void TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
         bool IsKeyUp)
     {
         // UI thread (async)
@@ -369,7 +398,7 @@ public static class HotkeysManager
                 return;
         }
 
-        var fProcess = ProcessManager.GetForegroundProcess();
+        var fProcess = processManager.Value.GetForegroundProcess();
 
         try
         {
@@ -440,15 +469,15 @@ public static class HotkeysManager
                     break;
                 case "suspendResumeTask":
                     {
-                        var sProcess = ProcessManager.GetLastSuspendedProcess();
+                        var sProcess = processManager.Value.GetLastSuspendedProcess();
 
                         if (sProcess is null || sProcess.Filter != ProcessEx.ProcessFilter.Allowed)
                             break;
 
                         if (sProcess.IsSuspended)
-                            ProcessManager.ResumeProcess(sProcess);
+                            processManager.Value.ResumeProcess(sProcess);
                         else
-                            ProcessManager.SuspendProcess(fProcess);
+                            processManager.Value.SuspendProcess(fProcess);
                     }
                     break;
                 case "shortcutKillApp":
@@ -459,47 +488,47 @@ public static class HotkeysManager
                         // check current OSD level
                         // .. if 0 (disabled) -> set OSD level to LastOnScreenDisplayLevel
                         // .. else (enabled) -> set OSD level to 0
-                        int currentOSDLevel = SettingsManager.GetInt("OnScreenDisplayLevel");
-                        int lastOSDLevel = SettingsManager.GetInt("LastOnScreenDisplayLevel");
+                        int currentOSDLevel = settingsManager.Value.GetInt("OnScreenDisplayLevel");
+                        int lastOSDLevel = settingsManager.Value.GetInt("LastOnScreenDisplayLevel");
 
                         switch (currentOSDLevel)
                         {
                             case 0:
-                                SettingsManager.SetProperty("OnScreenDisplayLevel", lastOSDLevel);
+                                settingsManager.Value.SetProperty("OnScreenDisplayLevel", lastOSDLevel);
                                 break;
                             default:
-                                SettingsManager.SetProperty("OnScreenDisplayLevel", 0);
+                                settingsManager.Value.SetProperty("OnScreenDisplayLevel", 0);
                                 break;
                         }
                     }
                     break;
                 case "OnScreenDisplayLevel":
                     {
-                        var value = !SettingsManager.GetBoolean(listener);
-                        SettingsManager.SetProperty(listener, value);
+                        var value = !settingsManager.Value.GetBoolean(listener);
+                        settingsManager.Value.SetProperty(listener, value);
                     }
                     break;
 
                 // temporary settings
                 case "DesktopLayoutEnabled":
                     {
-                        var value = !SettingsManager.GetBoolean(listener, true);
-                        SettingsManager.SetProperty(listener, value, false, true);
+                        var value = !settingsManager.Value.GetBoolean(listener, true);
+                        settingsManager.Value.SetProperty(listener, value, false, true);
 
-                        ToastManager.SendToast("Desktop layout", $"is now {(value ? "enabled" : "disabled")}");
+                        toastManager.Value.SendToast("Desktop layout", $"is now {(value ? "enabled" : "disabled")}");
                     }
                     break;
 
                 case "shortcutChangeHIDMode":
                     {
-                        var currentHIDmode = (HIDmode)SettingsManager.GetInt("HIDmode", true);
+                        var currentHIDmode = (HIDmode)settingsManager.Value.GetInt("HIDmode", true);
                         switch (currentHIDmode)
                         {
                             case HIDmode.Xbox360Controller:
-                                SettingsManager.SetProperty("HIDmode", (int)HIDmode.DualShock4Controller);
+                                settingsManager.Value.SetProperty("HIDmode", (int)HIDmode.DualShock4Controller);
                                 break;
                             case HIDmode.DualShock4Controller:
-                                SettingsManager.SetProperty("HIDmode", (int)HIDmode.Xbox360Controller);
+                                settingsManager.Value.SetProperty("HIDmode", (int)HIDmode.Xbox360Controller);
                                 break;
                             default:
                                 break;
@@ -510,12 +539,12 @@ public static class HotkeysManager
                 // Profiles
                 case "previousSubProfile":
                     {
-                        ProfileManager.CycleSubProfiles(true);
+                        profileManager.Value.CycleSubProfiles(true);
                         break;
                     }
                 case "nextSubProfile":
                     {
-                        ProfileManager.CycleSubProfiles(false);
+                        profileManager.Value.CycleSubProfiles(false);
                         break;
                     }
 
@@ -527,7 +556,7 @@ public static class HotkeysManager
             LogManager.LogDebug("Executed Hotkey: {0}", listener);
 
             // play a tune to notify a command was executed
-            MultimediaManager.PlayWindowsMedia("Windows Navigation Start.wav");
+            multimediaManager.Value.PlayWindowsMedia("Windows Navigation Start.wav");
 
             // raise an event
             CommandExecuted?.Invoke(listener);
@@ -538,7 +567,7 @@ public static class HotkeysManager
         }
     }
 
-    internal static void ClearHotkey(Hotkey hotkey)
+    public void ClearHotkey(Hotkey hotkey)
     {
         // do something
     }

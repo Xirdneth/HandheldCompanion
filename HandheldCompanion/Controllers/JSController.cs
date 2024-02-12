@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
@@ -21,11 +22,15 @@ public class JSController : IController
 
     protected Timer calibrateTimer = new Timer(5000) { AutoReset = false };
 
-    public JSController()
+    public JSController(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IControllerManager> controllerManager) :base(settingsManager, controllerManager)
     {
     }
 
-    public JSController(JOY_SETTINGS settings, PnPDetails details)
+    public JSController(JOY_SETTINGS settings, PnPDetails details,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager) : this(settingsManager, controllerManager)
     {
         AttachJoySettings(settings);
         AttachDetails(details);

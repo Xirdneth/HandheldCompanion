@@ -16,7 +16,7 @@ using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Platforms;
 
-public class RTSS : IPlatform
+public class RTSS : IPlatform, IRTSS
 {
     private const uint WM_APP = 0x8000;
     private const uint WM_RTSS_UPDATESETTINGS = WM_APP + 100;
@@ -27,12 +27,24 @@ public class RTSS : IPlatform
     private const string GLOBAL_PROFILE = "";
 
     private readonly ConcurrentList<int> HookedProcessIds = new();
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IProcessManager> processManager;
     private bool ProfileLoaded;
 
     private int RequestedFramerate;
 
-    public RTSS()
+    public RTSS(
+        Lazy<IProfileManager> profileManager, 
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IProcessManager> processManager)
     {
+        this.profileManager = profileManager;
+        this.settingsManager = settingsManager;
+        this.multimediaManager = multimediaManager;
+        this.processManager = processManager;
         PlatformType = PlatformType.RTSS;
         ExpectedVersion = new Version(7, 3, 4);
         Url = "https://www.guru3d.com/files-details/rtss-rivatuner-statistics-server-download.html";
@@ -89,6 +101,7 @@ public class RTSS : IPlatform
         // our main watchdog to (re)apply requested settings
         PlatformWatchdog = new Timer(2000) { Enabled = false };
         PlatformWatchdog.Elapsed += Watchdog_Elapsed;
+
     }
 
     public override bool Start()
@@ -100,18 +113,18 @@ public class RTSS : IPlatform
             // hook into current process
             Process.Exited += Process_Exited;
 
-        ProcessManager.ForegroundChanged += ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStopped += ProcessManager_ProcessStopped;
-        ProfileManager.Applied += ProfileManager_Applied;
+        processManager.Value.ForegroundChanged += ProcessManager_ForegroundChanged;
+        processManager.Value.ProcessStopped += ProcessManager_ProcessStopped;
+        profileManager.Value.Applied += ProfileManager_Applied;
 
         // If RTSS was started while HC was fully initialized, we need to pass both current profile and foreground process
-        if (SettingsManager.IsInitialized)
+        if (settingsManager.Value.IsInitialized)
         {
-            var foregroundProcess = ProcessManager.GetForegroundProcess();
+            var foregroundProcess = processManager.Value.GetForegroundProcess();
             if (foregroundProcess is not null)
                 ProcessManager_ForegroundChanged(foregroundProcess, null);
 
-            ProfileManager_Applied(ProfileManager.GetCurrent(), UpdateSource.Background);
+            ProfileManager_Applied(profileManager.Value.GetCurrent(), UpdateSource.Background);
         }
 
         return base.Start();
@@ -119,9 +132,9 @@ public class RTSS : IPlatform
 
     public override bool Stop(bool kill = false)
     {
-        ProcessManager.ForegroundChanged -= ProcessManager_ForegroundChanged;
-        ProcessManager.ProcessStopped -= ProcessManager_ProcessStopped;
-        ProfileManager.Applied -= ProfileManager_Applied;
+        processManager.Value.ForegroundChanged -= ProcessManager_ForegroundChanged;
+        processManager.Value.ProcessStopped -= ProcessManager_ProcessStopped;
+        profileManager.Value.Applied -= ProfileManager_Applied;
 
         return base.Stop(kill);
     }
@@ -130,7 +143,7 @@ public class RTSS : IPlatform
     {
         int frameLimit = 0;
 
-        DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+        DesktopScreen desktopScreen = multimediaManager.Value.GetDesktopScreen();
 
         if (desktopScreen is not null)
         {
@@ -180,7 +193,7 @@ public class RTSS : IPlatform
             catch { }
 
             await Task.Delay(1000);
-        } while (appEntry is null && ProcessManager.HasProcess(ProcessId) && KeepAlive);
+        } while (appEntry is null && processManager.Value.HasProcess(ProcessId) && KeepAlive);
 
         if (appEntry is null)
             return;

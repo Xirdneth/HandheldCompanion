@@ -4,27 +4,30 @@ using System.Security.Principal;
 
 namespace HandheldCompanion.Managers;
 
-public static class TaskManager
+public class TaskManager : ITaskManager
 {
     private const string TaskName = "HandheldCompanion";
-    private static string TaskExecutable;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private string TaskExecutable;
 
     // TaskManager vars
-    private static Task task;
-    private static TaskDefinition taskDefinition;
-    private static TaskService taskService;
+    private Task task;
+    private TaskDefinition taskDefinition;
+    private TaskService taskService;
 
-    private static bool IsInitialized;
+    public bool IsInitialized { get; set; }
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();
 
-    static TaskManager()
+    public TaskManager(Lazy<ISettingsManager> settingsManager)
     {
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        this.settingsManager = settingsManager;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value)
     {
         switch (name)
         {
@@ -34,7 +37,7 @@ public static class TaskManager
         }
     }
 
-    public static void Start(string Executable)
+    public void Start(string Executable)
     {
         TaskExecutable = Executable;
         taskService = new TaskService();
@@ -63,7 +66,7 @@ public static class TaskManager
             taskDefinition.Actions.Add(new ExecAction(TaskExecutable));
 
             task = TaskService.Instance.RootFolder.RegisterTaskDefinition(TaskName, taskDefinition);
-            task.Enabled = SettingsManager.GetBoolean("RunAtStartup");
+            task.Enabled = settingsManager.Value.GetBoolean("RunAtStartup");
         }
         catch { }
 
@@ -73,19 +76,19 @@ public static class TaskManager
         LogManager.LogInformation("{0} has started", "TaskManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
 
         IsInitialized = false;
 
-        SettingsManager.SettingValueChanged -= SettingsManager_SettingValueChanged;
+        settingsManager.Value.SettingValueChanged -= SettingsManager_SettingValueChanged;
 
         LogManager.LogInformation("{0} has stopped", "TaskManager");
     }
 
-    private static void UpdateTask(bool value)
+    private void UpdateTask(bool value)
     {
         if (task is null)
             return;

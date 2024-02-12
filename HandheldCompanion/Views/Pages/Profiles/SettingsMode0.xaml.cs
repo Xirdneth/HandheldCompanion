@@ -19,20 +19,30 @@ public partial class SettingsMode0 : Page
 {
     private Hotkey ProfilesPageHotkey;
     private LockObject updateLock = new();
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IMotionManager> motionManager;
+    private readonly Lazy<IInputsManager> inputsManager;
 
-    public SettingsMode0()
+    public SettingsMode0(
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IMotionManager> motionManager,
+        Lazy<IInputsManager> inputsManager)
     {
         InitializeComponent();
+        this.hotkeysManager = hotkeysManager;
+        this.motionManager = motionManager;
+        this.inputsManager = inputsManager;
     }
 
-    public SettingsMode0(string Tag) : this()
+    public SettingsMode0(string Tag,
+        Lazy<IHotkeysManager> hotkeysManager, Lazy<IMotionManager> motionManager, Lazy<IInputsManager> inputsManager) : this(hotkeysManager, motionManager, inputsManager)
     {
         this.Tag = Tag;
 
-        MotionManager.SettingsMode0Update += MotionManager_SettingsMode0Update;
+        motionManager.Value.SettingsMode0Update += MotionManager_SettingsMode0Update;
 
-        HotkeysManager.HotkeyCreated += TriggerCreated;
-        InputsManager.TriggerUpdated += TriggerUpdated;
+        hotkeysManager.Value.HotkeyCreated += TriggerCreated;
+        inputsManager.Value.TriggerUpdated += TriggerUpdated;
     }
 
     public void SetProfile()

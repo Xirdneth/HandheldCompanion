@@ -9,9 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media.Animation;
 using static HandheldCompanion.Managers.InputsHotkey;
-using static HandheldCompanion.Managers.InputsManager;
 
 namespace HandheldCompanion.Managers;
 
@@ -31,6 +31,9 @@ public class Hotkey
     public string Name;
     private readonly HotkeyQuickControl quickControl = new();
     private readonly Storyboard storyboard = new();
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IInputsManager> inputsManager;
 
     public Hotkey()
     {
@@ -38,7 +41,7 @@ public class Hotkey
         {
             // workaround for gamepad navigation
             await Task.Delay(100);
-            Listening?.Invoke(this, ListenerType.Output);
+            Listening?.Invoke(this, InputsManager.ListenerType.Output);
         };
 
         mainControl.HotkeyPin.Click += async (e, sender) =>
@@ -75,11 +78,26 @@ public class Hotkey
 
         Storyboard.SetTarget(opacityAnimation, mainControl.HotkeyInput);
         Storyboard.SetTargetProperty(opacityAnimation, new PropertyPath("Opacity"));
+
     }
 
-    public Hotkey(ushort id) : this()
+    public Hotkey(ushort id, 
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IInputsManager> inputsManager) : this()
     {
         hotkeyId = id;
+
+    }
+
+    public Hotkey(
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IInputsManager> inputsManager) : this()
+    {
+        this.hotkeysManager = hotkeysManager;
+        this.controllerManager = controllerManager;
+        this.inputsManager = inputsManager;
     }
 
     public bool IsPinned
@@ -139,7 +157,7 @@ public class Hotkey
                 {
                     // workaround for gamepad navigation
                     await Task.Delay(100);
-                    Listening?.Invoke(this, ListenerType.UI);
+                    Listening?.Invoke(this, InputsManager.ListenerType.UI);
                 };
                 break;
             case InputsHotkeyType.Custom:
@@ -150,7 +168,7 @@ public class Hotkey
                 {
                     // workaround for gamepad navigation
                     await Task.Delay(100);
-                    Listening?.Invoke(this, ListenerType.Default);
+                    Listening?.Invoke(this, InputsManager.ListenerType.Default);
                 };
                 break;
             default:
@@ -158,7 +176,7 @@ public class Hotkey
                 {
                     // workaround for gamepad navigation
                     await Task.Delay(100);
-                    Listening?.Invoke(this, ListenerType.Default);
+                    Listening?.Invoke(this, InputsManager.ListenerType.Default);
                 };
                 break;
         }
@@ -208,8 +226,8 @@ public class Hotkey
         // restore default name
         Name = inputsHotkey.GetName();
 
-        HotkeysManager.ClearHotkey(this);
-        ClearListening(this);
+        hotkeysManager.Value.ClearHotkey(this);
+        inputsManager.Value.ClearListening(this);
 
         DrawName();
         DrawOutput();
@@ -222,18 +240,18 @@ public class Hotkey
         Updated?.Invoke(this);
     }
 
-    public void StartListening(ListenerType type)
+    public void StartListening(InputsManager.ListenerType type)
     {
         // update button
         switch (type)
         {
-            case ListenerType.Output:
+            case InputsManager.ListenerType.Output:
                 mainControl.HotkeyOutput.Content = Resources.OverlayPage_Listening;
                 mainControl.HotkeyOutput.Style = Application.Current.FindResource("AccentButtonStyle") as Style;
                 DrawOutput();
                 break;
-            case ListenerType.UI:
-            case ListenerType.Default:
+            case InputsManager.ListenerType.UI:
+            case InputsManager.ListenerType.Default:
                 mainControl.HotkeyInput.Content = Resources.OverlayPage_Listening;
                 mainControl.HotkeyInput.Style = Application.Current.FindResource("AccentButtonStyle") as Style;
                 DrawInput();
@@ -241,19 +259,19 @@ public class Hotkey
         }
     }
 
-    public void StopListening(InputsChord inputsChord, ListenerType type)
+    public void StopListening(InputsChord inputsChord, InputsManager.ListenerType type)
     {
         this.inputsChord = inputsChord;
 
         // update button
         switch (type)
         {
-            case ListenerType.Output:
+            case InputsManager.ListenerType.Output:
                 mainControl.HotkeyOutput.Style = Application.Current.FindResource("DefaultButtonStyle") as Style;
                 DrawOutput();
                 break;
-            case ListenerType.UI:
-            case ListenerType.Default:
+            case InputsManager.ListenerType.UI:
+            case InputsManager.ListenerType.Default:
                 mainControl.HotkeyInput.Style = Application.Current.FindResource("DefaultButtonStyle") as Style;
                 DrawInput();
                 break;
@@ -295,9 +313,9 @@ public class Hotkey
             mainControl.MainGrid.IsEnabled = true;
             if (HasInput())
             {
-                var controller = ControllerManager.GetTargetController();
+                var controller = controllerManager.Value.GetTargetController();
                 if (controller is null)
-                    controller = ControllerManager.GetEmulatedController();
+                    controller = controllerManager.Value.GetEmulatedController();
                 var device = MainWindow.CurrentDevice;
 
                 foreach (var button in inputsChord.State.Buttons)
@@ -466,7 +484,7 @@ public class Hotkey
 
     public event ListeningEventHandler Listening;
 
-    public delegate void ListeningEventHandler(Hotkey hotkey, ListenerType type);
+    public delegate void ListeningEventHandler(Hotkey hotkey, InputsManager.ListenerType type);
 
     public event PinningEventHandler Pinning;
 

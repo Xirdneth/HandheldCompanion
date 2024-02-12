@@ -1,6 +1,8 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -15,15 +17,18 @@ public partial class TriggersPage : ILayoutPage
     public static List<AxisLayoutFlags> LeftTriggerAxis = new() { AxisLayoutFlags.L2 };
     public static List<ButtonFlags> RightTrigger = new() { ButtonFlags.R2Soft, ButtonFlags.R2Full };
     public static List<AxisLayoutFlags> RightTriggerAxis = new() { AxisLayoutFlags.R2 };
+    private readonly Lazy<IControllerManager> controllerManager;
 
-    public TriggersPage()
+    public TriggersPage(Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.controllerManager = controllerManager;
 
         // draw UI
         foreach (ButtonFlags button in LeftTrigger)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button,controllerManager, timerManager);
             LeftTriggerButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -31,7 +36,7 @@ public partial class TriggersPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in LeftTriggerAxis)
         {
-            TriggerMapping axisMapping = new TriggerMapping(axis);
+            TriggerMapping axisMapping = new TriggerMapping(axis,controllerManager, timerManager);
             LeftTriggerPanel.Children.Add(axisMapping);
 
             TriggerMappings.Add(axis, axisMapping);
@@ -39,7 +44,7 @@ public partial class TriggersPage : ILayoutPage
 
         foreach (ButtonFlags button in RightTrigger)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button,controllerManager, timerManager);
             RightTriggerButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -47,7 +52,7 @@ public partial class TriggersPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in RightTriggerAxis)
         {
-            TriggerMapping axisMapping = new TriggerMapping(axis);
+            TriggerMapping axisMapping = new TriggerMapping(axis,controllerManager,timerManager);
             RightTriggerPanel.Children.Add(axisMapping);
 
             TriggerMappings.Add(axis, axisMapping);
@@ -67,7 +72,9 @@ public partial class TriggersPage : ILayoutPage
         enabled = leftTrigger || rightTrigger;
     }
 
-    public TriggersPage(string Tag) : this()
+    public TriggersPage(string Tag,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         this.Tag = Tag;
     }

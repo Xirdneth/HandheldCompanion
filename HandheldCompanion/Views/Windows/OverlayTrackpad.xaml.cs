@@ -23,18 +23,28 @@ public partial class OverlayTrackpad : OverlayWindow
 
     private double TrackpadOpacity = 0.25;
     private readonly double TrackpadOpacityTouched = 0.10; // extra opacity when touched
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
 
-    public OverlayTrackpad()
+    public OverlayTrackpad(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IHotkeysManager> hotkeysManager) : base(hotkeysManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.controllerManager = controllerManager;
+        this.hotkeysManager = hotkeysManager;
         this._hotkeyId = 2;
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         // touch vars
         dpiInput = GetWindowsScaling();
         leftInput = new TouchInput();
         rightInput = new TouchInput();
+        
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)
@@ -175,7 +185,7 @@ public partial class OverlayTrackpad : OverlayWindow
                     LeftTrackpad.Opacity = TrackpadOpacity + TrackpadOpacityTouched;
 
                     // send vibration (todo: make it a setting)
-                    ControllerManager.GetTargetController()?.Rumble(); // (1, 25, 0, 60);
+                    controllerManager.Value.GetTargetController()?.Rumble(); // (1, 25, 0, 60);
                 }
                 break;
             case "RightTrackpad":
@@ -189,7 +199,7 @@ public partial class OverlayTrackpad : OverlayWindow
                     RightTrackpad.Opacity = TrackpadOpacity + TrackpadOpacityTouched;
 
                     // send vibration (todo: make it a setting)
-                    ControllerManager.GetTargetController()?.Rumble(); // (1, 25, 0, 60);
+                    controllerManager.Value.GetTargetController()?.Rumble(); // (1, 25, 0, 60);
                 }
                 break;
         }

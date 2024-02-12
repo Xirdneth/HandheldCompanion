@@ -23,16 +23,24 @@ public partial class QuickDevicePage : Page
 {
     private IReadOnlyList<Radio> radios;
     private Timer radioTimer;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
 
-    public QuickDevicePage()
+    public QuickDevicePage(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<IMultimediaManager> multimediaManager)
     {
         InitializeComponent();
-
-        MultimediaManager.PrimaryScreenChanged += DesktopManager_PrimaryScreenChanged;
-        MultimediaManager.DisplaySettingsChanged += DesktopManager_DisplaySettingsChanged;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        ProfileManager.Discarded += ProfileManager_Discarded;
+        this.settingsManager = settingsManager;
+        this.profileManager = profileManager;
+        this.multimediaManager = multimediaManager;
+        multimediaManager.Value.PrimaryScreenChanged += DesktopManager_PrimaryScreenChanged;
+        multimediaManager.Value.DisplaySettingsChanged += DesktopManager_DisplaySettingsChanged;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        profileManager.Value.Discarded += ProfileManager_Discarded;
 
         LegionGoPanel.Visibility = MainWindow.CurrentDevice is LegionGo ? Visibility.Visible : Visibility.Collapsed;
         DynamicLightingPanel.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
@@ -46,9 +54,13 @@ public partial class QuickDevicePage : Page
         radioTimer = new(1000);
         radioTimer.Elapsed += RadioTimer_Elapsed;
         radioTimer.Start();
+       
     }
 
-    public QuickDevicePage(string Tag) : this()
+    public QuickDevicePage(string Tag,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, profileManager, multimediaManager)
     {
         this.Tag = Tag;
     }
@@ -58,7 +70,7 @@ public partial class QuickDevicePage : Page
         // Go to profile integer scaling resolution
         if (profile.IntegerScalingEnabled)
         {
-            DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+            DesktopScreen desktopScreen = multimediaManager.Value.GetDesktopScreen();
             var profileResolution = desktopScreen?.screenDividers.FirstOrDefault(d => d.divider == profile.IntegerScalingDivider);
             if (profileResolution is not null)
             {
@@ -157,13 +169,13 @@ public partial class QuickDevicePage : Page
     private void DesktopManager_DisplaySettingsChanged(ScreenResolution resolution)
     {
         // We don't want to change the combobox when it's changed from profile integer scaling
-        var currentProfile = ProfileManager.GetCurrent();
+        var currentProfile = profileManager.Value.GetCurrent();
         if (ComboBoxResolution.SelectedItem is not null && currentProfile is not null && currentProfile.IntegerScalingEnabled)
             return;
 
         ComboBoxResolution.SelectedItem = resolution;
 
-        int screenFrequency = MultimediaManager.GetDesktopScreen().GetCurrentFrequency();
+        int screenFrequency = multimediaManager.Value.GetDesktopScreen().GetCurrentFrequency();
         foreach (ComboBoxItem comboBoxItem in ComboBoxFrequency.Items)
         {
             if (comboBoxItem.Tag is int frequency)
@@ -183,7 +195,7 @@ public partial class QuickDevicePage : Page
             return;
 
         ScreenResolution resolution = (ScreenResolution)ComboBoxResolution.SelectedItem;
-        int screenFrequency = MultimediaManager.GetDesktopScreen().GetCurrentFrequency();
+        int screenFrequency = multimediaManager.Value.GetDesktopScreen().GetCurrentFrequency();
 
         ComboBoxFrequency.Items.Clear();
         foreach (int frequency in resolution.Frequencies.Keys)
@@ -223,7 +235,7 @@ public partial class QuickDevicePage : Page
         int frequency = (int)((ComboBoxItem)ComboBoxFrequency.SelectedItem).Tag;
 
         // update current screen resolution
-        DesktopScreen desktopScreen = MultimediaManager.GetDesktopScreen();
+        DesktopScreen desktopScreen = multimediaManager.Value.GetDesktopScreen();
 
         if (desktopScreen.devMode.dmPelsWidth == resolution.Width &&
             desktopScreen.devMode.dmPelsHeight == resolution.Height &&
@@ -231,13 +243,13 @@ public partial class QuickDevicePage : Page
             desktopScreen.devMode.dmBitsPerPel == resolution.BitsPerPel)
             return;
 
-        MultimediaManager.SetResolution(resolution.Width, resolution.Height, frequency, resolution.BitsPerPel);
+        multimediaManager.Value.SetResolution(resolution.Width, resolution.Height, frequency, resolution.BitsPerPel);
     }
 
     public void SetResolution(ScreenResolution resolution)
     {
         // update current screen resolution
-        MultimediaManager.SetResolution(resolution.Width, resolution.Height, MultimediaManager.GetDesktopScreen().GetCurrentFrequency(), resolution.BitsPerPel);
+        multimediaManager.Value.SetResolution(resolution.Width, resolution.Height, multimediaManager.Value.GetDesktopScreen().GetCurrentFrequency(), resolution.BitsPerPel);
     }
 
     private void WIFIToggle_Toggled(object sender, RoutedEventArgs e)
@@ -257,7 +269,7 @@ public partial class QuickDevicePage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
+        settingsManager.Value.SetProperty("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
     }
 
     internal void Close()

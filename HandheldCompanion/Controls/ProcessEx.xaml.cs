@@ -45,6 +45,7 @@ public partial class ProcessEx : UserControl, IDisposable
 
     public Process Process;
     private readonly int ProcessId;
+    private readonly Lazy<IProcessManager> processManager;
     private LockObject updateLock = new();
 
     public ConcurrentList<int> Children = new();
@@ -57,9 +58,10 @@ public partial class ProcessEx : UserControl, IDisposable
     public ProcessEx()
     {
         InitializeComponent();
+        
     }
 
-    public ProcessEx(Process process, string path, string executable, ProcessFilter filter) : this()
+    public ProcessEx(Process process, string path, string executable, ProcessFilter filter, Lazy<IProcessManager> processManager) : this()
     {
         Process = process;
         ProcessId = process.Id;
@@ -67,7 +69,7 @@ public partial class ProcessEx : UserControl, IDisposable
         Executable = executable;
         MainWindowTitle = path;
         Filter = filter;
-
+        this.processManager = processManager;
         if (!string.IsNullOrEmpty(path) && File.Exists(path))
         {
             var icon = Icon.ExtractAssociatedIcon(Path);
@@ -276,11 +278,11 @@ public partial class ProcessEx : UserControl, IDisposable
                     if (prevThreadWaitReason == ThreadWaitReason.Suspended)
                         return;
 
-                    ProcessManager.SuspendProcess(this);
+                    processManager.Value.SuspendProcess(this);
                 }
                 break;
             case false:
-                ProcessManager.ResumeProcess(this);
+                processManager.Value.ResumeProcess(this);
                 break;
         }
     }
@@ -322,6 +324,6 @@ public partial class ProcessEx : UserControl, IDisposable
 
     internal void MainThreadDisposed()
     {
-        MainThread = ProcessManager.GetMainThread(Process);
+        MainThread = processManager.Value.GetMainThread(Process);
     }
 }

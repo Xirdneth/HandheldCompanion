@@ -16,7 +16,7 @@ using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
-public static class InputsManager
+public class InputsManager : IInputsManager
 {
     public delegate void InitializedEventHandler();
 
@@ -48,41 +48,44 @@ public static class InputsManager
     private const uint LLKHF_LOWER_IL_INJECTED = 0x00000002;
 
     // Gamepad variables
-    private static readonly PrecisionTimer KeyboardResetTimer;
+    private readonly PrecisionTimer KeyboardResetTimer;
 
-    private static ButtonState prevState = new();
+    private ButtonState prevState = new();
 
     // InputsChord variables
-    private static InputsChord currentChord = new();
-    private static InputsChord prevChord = new();
-    private static readonly InputsChord storedChord = new();
-    private static string SpecialKey;
+    private InputsChord currentChord = new();
+    private InputsChord prevChord = new();
+    private readonly InputsChord storedChord = new();
+    private string SpecialKey;
 
-    private static readonly Timer InputsChordHoldTimer;
-    private static readonly Timer InputsChordInputTimer;
+    private readonly Timer InputsChordHoldTimer;
+    private readonly Timer InputsChordInputTimer;
 
-    private static readonly Dictionary<KeyValuePair<KeyCode, bool>, int> prevKeys = new();
+    private readonly Dictionary<KeyValuePair<KeyCode, bool>, int> prevKeys = new();
 
     // Global variables
-    private static readonly Timer ListenerTimer;
+    private readonly Timer ListenerTimer;
 
-    private static ListenerType currentType;
-    private static InputsHotkey currentHotkey = new();
+    private ListenerType currentType;
+    private InputsHotkey currentHotkey = new();
 
-    private static readonly List<KeyEventArgsExt> BufferKeys = new();
+    private readonly List<KeyEventArgsExt> BufferKeys = new();
 
-    private static readonly Dictionary<string, InputsChord> Triggers = new();
+    private readonly Dictionary<string, InputsChord> Triggers = new();
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ILayoutManager> layoutManager;
 
     // Keyboard vars
-    private static IKeyboardMouseEvents m_GlobalHook;
+    private IKeyboardMouseEvents m_GlobalHook;
 
-    private static short KeyIndex;
-    private static bool KeyUsed;
+    private short KeyIndex;
+    private bool KeyUsed;
 
-    public static bool IsInitialized;
+    public bool IsInitialized { get; set; }
 
-    private static bool IsKeyDown;
-    private static bool IsKeyUp;
+    private bool IsKeyDown;
+    private bool IsKeyUp;
 
     /*
      * InputsManager v3
@@ -90,7 +93,7 @@ public static class InputsManager
      *       https://github.com/GregsStack/InputSimulatorStandard
      */
 
-    static InputsManager()
+    public InputsManager(Lazy<IHotkeysManager> hotkeysManager, Lazy<IControllerManager> controllerManager, Lazy<ILayoutManager> layoutManager)
     {
         KeyboardResetTimer = new PrecisionTimer();
         KeyboardResetTimer.SetInterval(new Action(ReleaseKeyboardBuffer), TIME_FLUSH, false, 0, TimerMode.OneShot, true);
@@ -107,29 +110,32 @@ public static class InputsManager
         InputsChordInputTimer.AutoReset = false;
         InputsChordInputTimer.Elapsed += (sender, e) => InputsChordInput_Elapsed();
 
-        HotkeysManager.HotkeyCreated += TriggerCreated;
+        //hotkeysManager.Value.HotkeyCreated += TriggerCreated;
+        this.hotkeysManager = hotkeysManager;
+        this.controllerManager = controllerManager;
+        this.layoutManager = layoutManager;
     }
 
-    public static event TriggerRaisedEventHandler TriggerRaised;
+    public event TriggerRaisedEventHandler TriggerRaised;
 
-    public static event TriggerUpdatedEventHandler TriggerUpdated;
+    public event TriggerUpdatedEventHandler TriggerUpdated;
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
-    private static void InputsChordHold_Elapsed()
+    private void InputsChordHold_Elapsed()
     {
         // triggered when key is pressed for a long time
         currentChord.InputsType = InputsChordType.Long;
         CheckForSequence(true, false);
     }
 
-    private static void InputsChordInput_Elapsed()
+    private void InputsChordInput_Elapsed()
     {
         // triggered after a key has been pressed (used by combo exclusively)
         CheckForSequence(false, true);
     }
 
-    private static bool CheckForSequence(bool IsKeyDown, bool IsKeyUp)
+    private bool CheckForSequence(bool IsKeyDown, bool IsKeyUp)
     {
         if (currentChord.State.IsEmpty() &&
             currentChord.OutputKeys.Count == 0)
@@ -165,7 +171,7 @@ public static class InputsManager
                         var inputType = currentChord.InputsType;
                         if ((inputType == InputsChordType.Click && IsKeyUp) || (inputType == InputsChordType.Long && IsKeyDown))
                         {
-                            var hidHotkeys = HotkeysManager.Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode"));
+                            var hidHotkeys = hotkeysManager.Value.Hotkeys.Values.Where(item => item.inputsHotkey.Listener.Equals("shortcutChangeHIDMode"));
                             foreach (var hidHotkey in hidHotkeys)
                             {
                                 if (!hidHotkey.IsEnabled)
@@ -211,7 +217,7 @@ public static class InputsManager
                 if (keys.Count != 0)
                     return false;
 
-                var layout = LayoutManager.GetCurrent();
+                var layout = layoutManager.Value.GetCurrent();
                 if (layout is not null)
                     foreach (var button in chord.state.Buttons)
                         if (layout.ButtonLayout.ContainsKey(button))
@@ -249,7 +255,7 @@ public static class InputsManager
         return false;
     }
 
-    private static List<KeyEventArgsExt> InjectModifiers(KeyEventArgsExt args)
+    private List<KeyEventArgsExt> InjectModifiers(KeyEventArgsExt args)
     {
         List<KeyEventArgsExt> mods = new();
 
@@ -267,7 +273,7 @@ public static class InputsManager
         return mods;
     }
 
-    private static void SetInterval(PrecisionTimer timer, short interval)
+    private void SetInterval(PrecisionTimer timer, short interval)
     {
         if (timer.GetPeriod() == interval)
             return;
@@ -278,7 +284,7 @@ public static class InputsManager
         timer.SetPeriod(interval);
     }
 
-    private static void M_GlobalHook_KeyEvent(object? sender, KeyEventArgs e)
+    private void M_GlobalHook_KeyEvent(object? sender, KeyEventArgs e)
     {
         KeyEventArgsExt args = (KeyEventArgsExt)e;
 
@@ -319,7 +325,7 @@ public static class InputsManager
                 if (chord[0] == hookKey)
                 {
                     // calls current controller (if connected)
-                    IController controller = ControllerManager.GetTargetController();
+                    IController controller = controllerManager.Value.GetTargetController();
                     controller?.InjectState(pair.state, args.IsKeyDown, args.IsKeyUp);
                     return;
                 }
@@ -387,7 +393,7 @@ public static class InputsManager
                         return;
 
                     // calls current controller (if connected)
-                    IController controller = ControllerManager.GetTargetController();
+                    IController controller = controllerManager.Value.GetTargetController();
                     controller?.InjectState(chord.state, args.IsKeyDown, args.IsKeyUp);
 
                     if (args.IsKeyDown)
@@ -416,7 +422,7 @@ public static class InputsManager
         KeyboardResetTimer.Start();
     }
 
-    private static List<string> GetTriggersFromChord(InputsChord lookup)
+    private List<string> GetTriggersFromChord(InputsChord lookup)
     {
         List<string> keys = new();
 
@@ -435,7 +441,7 @@ public static class InputsManager
         return keys;
     }
 
-    private static void ReleaseKeyboardBuffer()
+    private void ReleaseKeyboardBuffer()
     {
         if (BufferKeys.Count == 0)
             return;
@@ -466,12 +472,12 @@ public static class InputsManager
         BufferKeys.Clear();
     }
 
-    private static List<KeyCode> GetChord(List<KeyEventArgsExt> args)
+    private List<KeyCode> GetChord(List<KeyEventArgsExt> args)
     {
         return args.Select(a => (KeyCode)a.KeyValue).OrderBy(key => key).ToList();
     }
 
-    public static void Start()
+    public void Start()
     {
         if (MainWindow.CurrentDevice.HasKey())
             InitGlobalHook();
@@ -482,7 +488,7 @@ public static class InputsManager
         LogManager.LogInformation("{0} has started", "InputsManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
@@ -494,7 +500,7 @@ public static class InputsManager
         LogManager.LogInformation("{0} has stopped", "InputsManager");
     }
 
-    private static void InitGlobalHook()
+    private void InitGlobalHook()
     {
         if (m_GlobalHook is not null)
             return;
@@ -504,7 +510,7 @@ public static class InputsManager
         m_GlobalHook.KeyUp += M_GlobalHook_KeyEvent;
     }
 
-    private static void DisposeGlobalHook()
+    private void DisposeGlobalHook()
     {
         if (m_GlobalHook is null)
             return;
@@ -515,7 +521,7 @@ public static class InputsManager
         m_GlobalHook = null;
     }
 
-    public static void UpdateReport(ButtonState buttonState)
+    public void UpdateReport(ButtonState buttonState)
     {
         // half-press should be removed if full-press is also present
         if (currentChord.State[ButtonFlags.L2Full])
@@ -600,9 +606,9 @@ public static class InputsManager
         // GamepadResetTimer.Start();
     }
 
-    public static bool IsListening => !string.IsNullOrEmpty(currentHotkey.Listener);
+    public bool IsListening => !string.IsNullOrEmpty(currentHotkey.Listener);
 
-    public static void StartListening(Hotkey hotkey, ListenerType type)
+    public void StartListening(Hotkey hotkey, ListenerType type)
     {
         if (!MainWindow.CurrentDevice.HasKey())
             InitGlobalHook();
@@ -636,7 +642,7 @@ public static class InputsManager
         ListenerTimer.Start();
     }
 
-    private static void StopListening(InputsChord inputsChord = null)
+    private void StopListening(InputsChord inputsChord = null)
     {
         if (!MainWindow.CurrentDevice.HasKey())
             DisposeGlobalHook();
@@ -668,26 +674,26 @@ public static class InputsManager
         InputsChordInputTimer.Stop();
     }
 
-    private static void ListenerExpired()
+    private void ListenerExpired()
     {
         // restore previous chord
         StopListening(prevChord);
     }
 
-    public static void ClearListening(Hotkey hotkey)
+    public void ClearListening(Hotkey hotkey)
     {
         currentHotkey = hotkey.inputsHotkey;
         StopListening();
     }
 
-    private static void TriggerCreated(Hotkey hotkey)
+    private void TriggerCreated(Hotkey hotkey)
     {
         var listener = hotkey.inputsHotkey.Listener;
 
         Triggers.TryAdd(listener, hotkey.inputsChord);
     }
 
-    internal static void InvokeTrigger(Hotkey hotkey, bool IsKeyDown, bool IsKeyUp)
+    public void InvokeTrigger(Hotkey hotkey, bool IsKeyDown, bool IsKeyUp)
     {
         if (IsKeyDown && hotkey.inputsHotkey.OnKeyDown)
             TriggerRaised?.Invoke(hotkey.inputsHotkey.Listener, hotkey.inputsChord, hotkey.inputsHotkey.hotkeyType,

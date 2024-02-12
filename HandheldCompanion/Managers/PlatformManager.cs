@@ -8,30 +8,53 @@ using System.Windows;
 
 namespace HandheldCompanion.Managers;
 
-public static class PlatformManager
+public class PlatformManager : IPlatformManager
 {
     private const int UpdateInterval = 1000;
 
     // gaming platforms
-    public static readonly Steam Steam = new();
-    public static readonly GOGGalaxy GOGGalaxy = new();
-    public static readonly UbisoftConnect UbisoftConnect = new();
+    public Steam Steam { get; set; }
+    public GOGGalaxy GOGGalaxy { get; set; } = new();
+    public UbisoftConnect UbisoftConnect { get; set; } = new();
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IOSDManager> oSDManager;
+    private readonly Lazy<IProcessManager> processManager;
 
     // misc platforms
-    public static RTSS RTSS = new();
-    public static Platforms.LibreHardwareMonitor LibreHardwareMonitor = new();
+    public RTSS RTSS { get; set; }
+    public Platforms.LibreHardwareMonitor libreHardwareMonitor { get; set; } = new();
 
-    private static Timer UpdateTimer;
+    private Timer UpdateTimer;
 
-    private static bool IsInitialized;
+    private bool IsInitialized;
 
-    private static PlatformNeeds CurrentNeeds = PlatformNeeds.None;
-    private static PlatformNeeds PreviousNeeds = PlatformNeeds.None;
+    private PlatformNeeds CurrentNeeds = PlatformNeeds.None;
+    private PlatformNeeds PreviousNeeds = PlatformNeeds.None;
 
-    public static event InitializedEventHandler Initialized;
+
+    public event InitializedEventHandler Initialized;
     public delegate void InitializedEventHandler();
 
-    public static void Start()
+    public PlatformManager(
+        Lazy<IProfileManager> profileManager, 
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IRTSS> rTSS,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IOSDManager> oSDManager,
+        Lazy<IProcessManager> processManager)
+    {
+        this.profileManager = profileManager;
+        this.powerProfileManager = powerProfileManager;
+        this.settingsManager = settingsManager;
+        this.oSDManager = oSDManager;
+        this.processManager = processManager;
+        this.RTSS = (RTSS)rTSS.Value;
+        Steam = new(processManager);
+    }
+
+    public void Start()
     {
         if (Steam.IsInstalled)
             Steam.Start();
@@ -48,15 +71,15 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            UpdateCurrentNeeds_OnScreenDisplay(OSDManager.OverlayLevel);
+            UpdateCurrentNeeds_OnScreenDisplay(oSDManager.Value.OverlayLevel);
         }
 
-        if (LibreHardwareMonitor.IsInstalled)
-            LibreHardwareMonitor.Start();
+        if (libreHardwareMonitor.IsInstalled)
+            libreHardwareMonitor.Start();
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ProfileManager.Applied += ProfileManager_Applied;
-        PowerProfileManager.Applied += PowerProfileManager_Applied;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        powerProfileManager.Value.Applied += PowerProfileManager_Applied;
 
         UpdateTimer = new Timer(UpdateInterval);
         UpdateTimer.AutoReset = false;
@@ -69,7 +92,7 @@ public static class PlatformManager
         LogManager.LogInformation("{0} has started", "PlatformManager");
     }
 
-    private static void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
+    private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)
     {
         // AutoTDP
         if (profile.AutoTDPEnabled)
@@ -81,7 +104,7 @@ public static class PlatformManager
         UpdateTimer.Start();
     }
 
-    private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
         // Framerate limiter
         if (profile.FramerateValue != 0)
@@ -93,7 +116,7 @@ public static class PlatformManager
         UpdateTimer.Start();
     }
 
-    private static void SettingsManager_SettingValueChanged(string name, object value)
+    private void SettingsManager_SettingValueChanged(string name, object value)
     {
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
@@ -111,7 +134,7 @@ public static class PlatformManager
         });
     }
 
-    private static void UpdateCurrentNeeds_OnScreenDisplay(short level)
+    private void UpdateCurrentNeeds_OnScreenDisplay(short level)
     {
         switch (level)
         {
@@ -133,7 +156,7 @@ public static class PlatformManager
         }
     }
 
-    private static void MonitorPlatforms()
+    private void MonitorPlatforms()
     {
         /*
          * Dependencies:
@@ -184,7 +207,7 @@ public static class PlatformManager
         PreviousNeeds = CurrentNeeds;
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (Steam.IsInstalled)
             Steam.Stop();
@@ -197,20 +220,20 @@ public static class PlatformManager
 
         if (RTSS.IsInstalled)
         {
-            var killRTSS = SettingsManager.GetBoolean("PlatformRTSSEnabled");
+            var killRTSS = settingsManager.Value.GetBoolean("PlatformRTSSEnabled");
             RTSS.Stop(killRTSS);
             RTSS.Dispose();
         }
 
-        if (LibreHardwareMonitor.IsInstalled)
-            LibreHardwareMonitor.Stop();
+        if (libreHardwareMonitor.IsInstalled)
+            libreHardwareMonitor.Stop();
 
         IsInitialized = false;
 
         LogManager.LogInformation("{0} has stopped", "PlatformManager");
     }
 
-    public static PlatformType GetPlatform(Process proc)
+    public PlatformType GetPlatform(Process proc)
     {
         if (!IsInitialized)
             return PlatformType.Windows;

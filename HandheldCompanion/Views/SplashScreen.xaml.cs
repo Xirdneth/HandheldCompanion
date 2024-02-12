@@ -1,4 +1,6 @@
-﻿using HandheldCompanion.Views.Classes;
+﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Views.Classes;
+using System;
 
 namespace HandheldCompanion.Views
 {
@@ -7,7 +9,7 @@ namespace HandheldCompanion.Views
     /// </summary>
     public partial class SplashScreen : OverlayWindow
     {
-        public SplashScreen()
+        public SplashScreen(Lazy<IHotkeysManager> hotkeysManager): base(hotkeysManager)
         {
             InitializeComponent();
         }

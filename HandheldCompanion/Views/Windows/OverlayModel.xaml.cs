@@ -23,7 +23,10 @@ namespace HandheldCompanion.Views.Windows;
 public partial class OverlayModel : OverlayWindow
 {
     private readonly Timer UpdateTimer;
-
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IMotionManager> motionManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
     private IModel CurrentModel;
     public Vector3D DesiredAngleDeg = new(0, 0, 0);
     private Quaternion DevicePose = new(0.0f, 0.0f, 1.0f, 0.0f);
@@ -48,13 +51,21 @@ public partial class OverlayModel : OverlayWindow
     private float TriggerAngleShoulderRight;
     private float TriggerAngleShoulderRightPrev;
 
-    public OverlayModel()
+    public OverlayModel(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IPerformanceManager> performanceManager, 
+        Lazy<IMotionManager> motionManager,
+        Lazy<IHotkeysManager> hotkeysManager) :base(hotkeysManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.performanceManager = performanceManager;
+        this.motionManager = motionManager;
+        this.hotkeysManager = hotkeysManager;
         this._hotkeyId = 1;
 
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        MotionManager.OverlayModelUpdate += MotionManager_OverlayModelUpdate;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        motionManager.Value.OverlayModelUpdate += MotionManager_OverlayModelUpdate;
 
         // initialize timers
         UpdateTimer = new Timer(33);
@@ -62,6 +73,7 @@ public partial class OverlayModel : OverlayWindow
         UpdateTimer.Elapsed += DrawModel;
 
         UpdateModel();
+
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)

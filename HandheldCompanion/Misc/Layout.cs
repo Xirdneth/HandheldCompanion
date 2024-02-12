@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,9 @@ namespace HandheldCompanion;
 [Serializable]
 public partial class Layout : ICloneable, IDisposable
 {
+    public readonly IControllerManager controllerManager;
+    public readonly ITimerManager timerManager;
+
     public SortedDictionary<ButtonFlags, List<IActions>> ButtonLayout { get; set; } = new();
     public SortedDictionary<AxisLayoutFlags, IActions> AxisLayout { get; set; } = new();
     public SortedDictionary<AxisLayoutFlags, IActions> GyroLayout { get; set; } = new();
@@ -18,12 +22,22 @@ public partial class Layout : ICloneable, IDisposable
 
     // gyro related
 
+    public Layout(IControllerManager controllerManager,
+        ITimerManager timerManager)
+    {
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
+    }
+
+    [JsonConstructor]
     public Layout()
     {
+
     }
 
     public Layout(bool fill) : this()
     {
+
         // generic button mapping
         foreach (ButtonFlags button in Enum.GetValues(typeof(ButtonFlags)))
         {
@@ -34,10 +48,10 @@ public partial class Layout : ICloneable, IDisposable
         }
 
         // ButtonLayout[ButtonFlags.OEM1] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.Special } };
-        ButtonLayout[ButtonFlags.LeftPadClickUp] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.DPadUp } };
-        ButtonLayout[ButtonFlags.LeftPadClickDown] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.DPadDown } };
-        ButtonLayout[ButtonFlags.LeftPadClickLeft] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.DPadLeft } };
-        ButtonLayout[ButtonFlags.LeftPadClickRight] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.DPadRight } };
+        ButtonLayout[ButtonFlags.LeftPadClickUp] = new List<IActions>() { new ButtonActions() { Button = ButtonFlags.DPadUp } };
+        ButtonLayout[ButtonFlags.LeftPadClickDown] = new List<IActions>() { new ButtonActions() { Button = ButtonFlags.DPadDown } };
+        ButtonLayout[ButtonFlags.LeftPadClickLeft] = new List<IActions>() { new ButtonActions() { Button = ButtonFlags.DPadLeft } };
+        ButtonLayout[ButtonFlags.LeftPadClickRight] = new List<IActions>() { new ButtonActions() { Button = ButtonFlags.DPadRight } };
 
         // generic axis mapping
         foreach (AxisLayoutFlags axis in Enum.GetValues(typeof(AxisLayoutFlags)))
@@ -49,10 +63,49 @@ public partial class Layout : ICloneable, IDisposable
             {
                 case AxisLayoutFlags.L2:
                 case AxisLayoutFlags.R2:
-                    AxisLayout[axis] = new TriggerActions { Axis = axis };
+                    AxisLayout[axis] = new TriggerActions() { Axis = axis };
                     break;
                 default:
-                    AxisLayout[axis] = new AxisActions { Axis = axis };
+                    AxisLayout[axis] = new AxisActions() { Axis = axis };
+                    break;
+            }
+        }
+    }
+
+    public Layout(bool fill,
+        Lazy<IControllerManager> controllerManager, 
+        Lazy<ITimerManager> timerManager) : this(controllerManager.Value, timerManager.Value)
+    {
+
+        // generic button mapping
+        foreach (ButtonFlags button in Enum.GetValues(typeof(ButtonFlags)))
+        {
+            if (!IController.TargetButtons.Contains(button))
+                continue;
+
+            ButtonLayout[button] = new List<IActions>() { new ButtonActions(controllerManager,timerManager) { Button = button } };
+        }
+
+        // ButtonLayout[ButtonFlags.OEM1] = new List<IActions>() { new ButtonActions { Button = ButtonFlags.Special } };
+        ButtonLayout[ButtonFlags.LeftPadClickUp] = new List<IActions>() { new ButtonActions(controllerManager, timerManager) { Button = ButtonFlags.DPadUp } };
+        ButtonLayout[ButtonFlags.LeftPadClickDown] = new List<IActions>() { new ButtonActions(controllerManager, timerManager) { Button = ButtonFlags.DPadDown } };
+        ButtonLayout[ButtonFlags.LeftPadClickLeft] = new List<IActions>() { new ButtonActions(controllerManager, timerManager) { Button = ButtonFlags.DPadLeft } };
+        ButtonLayout[ButtonFlags.LeftPadClickRight] = new List<IActions>() { new ButtonActions(controllerManager, timerManager) { Button = ButtonFlags.DPadRight } };
+
+        // generic axis mapping
+        foreach (AxisLayoutFlags axis in Enum.GetValues(typeof(AxisLayoutFlags)))
+        {
+            if (!IController.TargetAxis.Contains(axis))
+                continue;
+
+            switch (axis)
+            {
+                case AxisLayoutFlags.L2:
+                case AxisLayoutFlags.R2:
+                    AxisLayout[axis] = new TriggerActions(controllerManager, timerManager) { Axis = axis };
+                    break;
+                default:
+                    AxisLayout[axis] = new AxisActions(controllerManager, timerManager) { Axis = axis };
                     break;
             }
         }
@@ -61,9 +114,9 @@ public partial class Layout : ICloneable, IDisposable
     public object Clone()
     {
         var jsonString = JsonConvert.SerializeObject(this, Formatting.Indented,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
         var deserialized = JsonConvert.DeserializeObject<Layout>(jsonString,
-            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
+            new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
 
         deserialized.IsDefaultLayout = false; // Clone shouldn't be default layout in case it is true
         

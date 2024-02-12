@@ -22,27 +22,79 @@ namespace HandheldCompanion.Views.Pages;
 /// </summary>
 public partial class LayoutPage : Page
 {
-    private LayoutTemplate currentTemplate = new();
+    private LayoutTemplate currentTemplate { get; set; }
     protected LockObject updateLock = new();
 
     // page vars
     private Dictionary<string, (ILayoutPage, NavigationViewItem)> pages;
-    private readonly ButtonsPage buttonsPage = new();
-    private readonly DpadPage dpadPage = new();
-    private readonly GyroPage gyroPage = new();
-    private readonly JoysticksPage joysticksPage = new();
-    private readonly TrackpadsPage trackpadsPage = new();
-    private readonly TriggersPage triggersPage = new();
-
+    private ButtonsPage buttonsPage { get; set; }
+    private DpadPage dpadPage { get; set; }
+    private GyroPage gyroPage { get; set; }
+    private JoysticksPage joysticksPage { get; set; }
+    private TrackpadsPage trackpadsPage { get; set; }
+    private TriggersPage triggersPage { get; set; }
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<ILayoutManager> layoutManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IVirtualManager> virtualManager;
+    private readonly Lazy<IDeviceManager> deviceManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<ITimerManager> timerManager;
+    private readonly Lazy<IInputsManager> inputsManager;
     private NavigationView parentNavView;
     private string preNavItemTag;
 
-    public LayoutPage()
+    public LayoutPage(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IProfileManager> profileManager,
+        Lazy<ILayoutManager> layoutManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IDeviceManager> deviceManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<ITimerManager> timerManager,
+        Lazy<IInputsManager> inputsManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.profileManager = profileManager;
+        this.layoutManager = layoutManager;
+        this.controllerManager = controllerManager;
+        this.virtualManager = virtualManager;
+        this.deviceManager = deviceManager;
+        this.hotkeysManager = hotkeysManager;
+        this.timerManager = timerManager;
+        this.inputsManager = inputsManager;
+        joysticksPage = new(controllerManager, timerManager);
+        trackpadsPage = new(controllerManager, timerManager);
+        triggersPage = new(controllerManager,timerManager);
+        currentTemplate = new();
+        buttonsPage = new(controllerManager, timerManager);
+        dpadPage = new(controllerManager,timerManager);
+        gyroPage = new(hotkeysManager, controllerManager, inputsManager, timerManager);
     }
 
-    public LayoutPage(string Tag, NavigationView parent) : this()
+    public LayoutPage(string Tag, NavigationView parent,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<ILayoutManager> layoutManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IDeviceManager> deviceManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<ITimerManager> timerManager,
+        Lazy<IInputsManager> inputsManager) : 
+        this(
+            settingsManager, 
+            profileManager, 
+            layoutManager, 
+            controllerManager, 
+            virtualManager, 
+            deviceManager,
+            hotkeysManager,
+            timerManager,
+            inputsManager)
     {
         this.Tag = Tag;
         this.parentNavView = parent;
@@ -89,14 +141,16 @@ public partial class LayoutPage : Page
             gyroMapping.Deleted += (sender) => AxisMapping_Deleted((AxisLayoutFlags)sender);
         }
 
-        LayoutManager.Updated += LayoutManager_Updated;
-        LayoutManager.Initialized += LayoutManager_Initialized;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
-        DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
-        ProfileManager.Updated += ProfileManager_Updated;
+        layoutManager.Value.Updated += LayoutManager_Updated;
+        layoutManager.Value.Initialized += LayoutManager_Initialized;
+        controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
+        virtualManager.Value.ControllerSelected += VirtualManager_ControllerSelected;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        deviceManager.Value.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
+        deviceManager.Value.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
+        profileManager.Value.Updated += ProfileManager_Updated;
+
+        
     }
 
     private void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
@@ -135,7 +189,7 @@ public partial class LayoutPage : Page
 
     private void DeviceManager_UsbDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
     {
-        IController controller = ControllerManager.GetTargetController();
+        IController controller = controllerManager.Value.GetTargetController();
 
         // lazy
         if (controller is not null)
@@ -229,12 +283,12 @@ public partial class LayoutPage : Page
     private void RefreshLayoutList()
     {
         // Get filter settings
-        var FilterOnDevice = SettingsManager.GetBoolean("LayoutFilterOnDevice");
+        var FilterOnDevice = settingsManager.Value.GetBoolean("LayoutFilterOnDevice");
 
         // Get current controller
-        var controller = ControllerManager.GetTargetController();
+        var controller = controllerManager.Value.GetTargetController();
 
-        foreach (var layoutTemplate in LayoutManager.Templates)
+        foreach (var layoutTemplate in layoutManager.Value.Templates)
         {
             // get parent
             if (layoutTemplate.Parent is not ComboBoxItem parent)
@@ -332,7 +386,7 @@ public partial class LayoutPage : Page
                 cB_Layouts.SelectedValue = null;
 
                 CheckBoxDefaultLayout.IsChecked = currentTemplate.Layout.IsDefaultLayout;
-                CheckBoxDefaultLayout.IsEnabled = currentTemplate.Layout != LayoutManager.GetDesktop();
+                CheckBoxDefaultLayout.IsEnabled = currentTemplate.Layout != layoutManager.Value.GetDesktop();
             }
         });
     }
@@ -411,7 +465,7 @@ public partial class LayoutPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
+        settingsManager.Value.SetProperty("LayoutFilterOnDevice", CheckBoxDeviceLayouts.IsChecked);
     }
 
     private void LayoutExportButton_Click(object sender, RoutedEventArgs e)
@@ -437,9 +491,9 @@ public partial class LayoutPage : Page
         }
 
         if (ExportForCurrent.IsChecked == true)
-            newLayout.ControllerType = ControllerManager.GetTargetController()?.GetType();
+            newLayout.ControllerType = controllerManager.Value.GetTargetController()?.GetType();
 
-        LayoutManager.SerializeLayoutTemplate(newLayout);
+        layoutManager.Value.SerializeLayoutTemplate(newLayout);
 
         LayoutFlyout.Hide();
         _ = Dialog.ShowAsync("Layout template exported",
@@ -546,7 +600,7 @@ public partial class LayoutPage : Page
     private void CheckBoxDefaultLayout_Checked(object sender, RoutedEventArgs e)
     {
         var isDefaultLayout = (bool)CheckBoxDefaultLayout.IsChecked;
-        var prevDefaultLayoutProfile = ProfileManager.GetProfileWithDefaultLayout();
+        var prevDefaultLayoutProfile = profileManager.Value.GetProfileWithDefaultLayout();
 
         currentTemplate.Layout.IsDefaultLayout = isDefaultLayout;
         currentTemplate.Layout.UpdateLayout();
@@ -555,7 +609,7 @@ public partial class LayoutPage : Page
         if (isDefaultLayout && prevDefaultLayoutProfile != null && prevDefaultLayoutProfile.Layout != currentTemplate.Layout)
         {
             prevDefaultLayoutProfile.Layout.IsDefaultLayout = false;
-            ProfileManager.UpdateOrCreateProfile(prevDefaultLayoutProfile);
+            profileManager.Value.UpdateOrCreateProfile(prevDefaultLayoutProfile);
         }
     }
 }

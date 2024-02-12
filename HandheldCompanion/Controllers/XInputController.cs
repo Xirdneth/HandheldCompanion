@@ -1,5 +1,6 @@
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using Microsoft.Extensions.DependencyInjection;
 using SharpDX.XInput;
 using System;
 using System.Linq;
@@ -9,17 +10,62 @@ using System.Windows.Media;
 
 namespace HandheldCompanion.Controllers;
 
-public class XInputController : IController
+public class XInputController : IController, IXInputController
 {
     private Controller Controller;
     private Gamepad Gamepad;
 
     private XInputStateSecret State;
+    private readonly Lazy<IDeviceManager> deviceManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    public XInputController()
-    { }
+    public XInputController(
+        Lazy<IDeviceManager> deviceManager,
+        Lazy<ITimerManager> timerManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager) : base(settingsManager, controllerManager)
+    {
+        this.deviceManager = deviceManager;
+        this.timerManager = timerManager;
+    }
 
-    public XInputController(PnPDetails details)
+    public XInputController() : base()
+    {
+
+    }
+
+    public XInputController(PnPDetails details) : base()
+    {
+        AttachController(details.XInputUserIndex);
+        AttachDetails(details);
+
+        // UI
+        ColoredButtons.Add(ButtonFlags.B1, new SolidColorBrush(Color.FromArgb(255, 81, 191, 61)));
+        ColoredButtons.Add(ButtonFlags.B2, new SolidColorBrush(Color.FromArgb(255, 217, 65, 38)));
+        ColoredButtons.Add(ButtonFlags.B3, new SolidColorBrush(Color.FromArgb(255, 26, 159, 255)));
+        ColoredButtons.Add(ButtonFlags.B4, new SolidColorBrush(Color.FromArgb(255, 255, 200, 44)));
+
+        DrawUI();
+        UpdateUI();
+
+        string enumerator = Details.GetEnumerator();
+        switch (enumerator)
+        {
+            default:
+            case "BTHENUM":
+                ProgressBarWarning.Text = Properties.Resources.XInputController_Warning_BTH;
+                break;
+            case "USB":
+                ProgressBarWarning.Text = Properties.Resources.XInputController_Warning_USB;
+                break;
+        }
+    }
+
+    public XInputController(PnPDetails details,
+        Lazy<IDeviceManager> deviceManager,
+        Lazy<ITimerManager> timerManager,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager) : this(deviceManager, timerManager, settingsManager, controllerManager)
     {
         AttachController(details.XInputUserIndex);
         AttachDetails(details);
@@ -149,17 +195,18 @@ public class XInputController : IController
 
     public override void Plug()
     {
-        TimerManager.Tick += (ticks) => UpdateInputs(ticks, true);
+        timerManager.Value.Tick += (ticks) => UpdateInputs(ticks, true);
         base.Plug();
     }
 
     public override void Unplug()
     {
-        TimerManager.Tick -= (ticks) => UpdateInputs(ticks, true);
+        var timerManagertmp = App.ServiceProvider.GetRequiredService<Lazy<ITimerManager>>();
+        timerManagertmp.Value.Tick -= (ticks) => UpdateInputs(ticks, true);
         base.Unplug();
     }
 
-    public static UserIndex TryGetUserIndex(PnPDetails details)
+    public UserIndex TryGetUserIndex(PnPDetails details)
     {
         XInputCapabilitiesEx capabilitiesEx = new();
 
@@ -170,7 +217,7 @@ public class XInputController : IController
                 if (capabilitiesEx.ProductId != details.ProductID || capabilitiesEx.VendorId != details.VendorID)
                     continue;
 
-                var devices = DeviceManager.GetDetails(capabilitiesEx.VendorId, capabilitiesEx.ProductId);
+                var devices = deviceManager.Value.GetDetails(capabilitiesEx.VendorId, capabilitiesEx.ProductId);
                 if (devices.FirstOrDefault() is not null)
                     return (UserIndex)idx;
             }

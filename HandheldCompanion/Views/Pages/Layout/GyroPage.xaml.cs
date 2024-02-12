@@ -2,6 +2,8 @@ using HandheldCompanion.Controllers;
 
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -13,15 +15,24 @@ namespace HandheldCompanion.Views.Pages
     public partial class GyroPage : ILayoutPage
     {
         public static List<AxisLayoutFlags> Gyroscope = new() { AxisLayoutFlags.Gyroscope };
+        private readonly Lazy<IHotkeysManager> hotkeysManager;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<ITimerManager> timerManager;
 
-        public GyroPage()
+        public GyroPage(
+            Lazy<IHotkeysManager> hotkeysManager,
+            Lazy<IControllerManager> controllerManager, 
+            Lazy<IInputsManager> inputsManager,
+            Lazy<ITimerManager> timerManager)
         {
             InitializeComponent();
-
+            this.hotkeysManager = hotkeysManager;
+            this.controllerManager = controllerManager;
+            this.timerManager = timerManager;
             // draw UI
             foreach (AxisLayoutFlags axis in Gyroscope)
             {
-                GyroMapping gyroMapping = new GyroMapping(axis);
+                GyroMapping gyroMapping = new GyroMapping(axis,hotkeysManager,controllerManager,inputsManager,timerManager);
                 GyroscopePanel.Children.Add(gyroMapping);
 
                 GyroMappings.Add(axis, gyroMapping);
@@ -39,7 +50,11 @@ namespace HandheldCompanion.Views.Pages
             enabled = gyro;
         }
 
-        public GyroPage(string Tag) : this()
+        public GyroPage(string Tag,
+            Lazy<IHotkeysManager> hotkeysManager, 
+            Lazy<IControllerManager> controllerManager,
+            Lazy<IInputsManager> inputsManager,
+            Lazy<ITimerManager> timerManager): this (hotkeysManager, controllerManager, inputsManager, timerManager)
         {
             this.Tag = Tag;
         }

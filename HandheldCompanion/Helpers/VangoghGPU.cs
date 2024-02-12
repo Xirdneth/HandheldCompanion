@@ -6,7 +6,7 @@ using Device = System.Tuple<string, ulong, ulong, uint[]>;
 
 namespace HandheldCompanion.Helpers
 {
-    internal class VangoghGPU : IDisposable
+    public class VangoghGPU : IDisposable, IVangoghGPU
     {
         public static readonly Device[] SupportedDevices =
         {
@@ -25,6 +25,11 @@ namespace HandheldCompanion.Helpers
             new Device("AMD Radeon RX 670 Graphics", 0x80300000, 0x8037ffff, new uint[] { 0x43F3900, 0x43F3C05, 0x43F3E00 }),
         };
 
+        public VangoghGPU(Lazy<IDeviceManager> deviceManager)
+        {
+            this.deviceManager = deviceManager;
+        }
+
         private static Device? DetectedDevice;
 
         public static bool IsSupported
@@ -32,7 +37,7 @@ namespace HandheldCompanion.Helpers
             get { return DetectedDevice != null; }
         }
 
-        public static VangoghGPU? Open()
+        public VangoghGPU? Open()
         {
             if (DetectedDevice is null)
                 return null;
@@ -40,7 +45,7 @@ namespace HandheldCompanion.Helpers
             return Open(DetectedDevice);
         }
 
-        public static VangoghGPU? Open(Device device)
+        public VangoghGPU? Open(Device device)
         {
             if (device is null)
                 return null;
@@ -55,14 +60,14 @@ namespace HandheldCompanion.Helpers
             NotDetected
         }
 
-        public static DetectionStatus Detect()
+        public DetectionStatus Detect()
         {
             var discoveredDevices = new Dictionary<string, string>();
 
-            foreach (var pnp in DeviceManager.GetDevices(DeviceManager.GUID_DISPLAY) ?? new string[0])
+            foreach (var pnp in deviceManager.Value.GetDevices(DeviceManager.GUID_DISPLAY) ?? new string[0])
             {
                 // Properly support many devices with the same name (pick the first one)
-                var name = DeviceManager.GetDeviceDesc(pnp);
+                var name = deviceManager.Value.GetDeviceDesc(pnp);
                 if (name is not null && !discoveredDevices.ContainsKey(name))
                     discoveredDevices[name] = pnp;
             }
@@ -78,7 +83,7 @@ namespace HandheldCompanion.Helpers
                 }
 
                 var devicePNP = discoveredDevices[deviceName];
-                var ranges = DeviceManager.GetDeviceMemResources(devicePNP);
+                var ranges = deviceManager.Value.GetDeviceMemResources(devicePNP);
                 if (ranges is null)
                 {
                     LogManager.LogError("GPU: {0}: {1}: No memory ranges", deviceName, devicePNP);
@@ -145,9 +150,9 @@ namespace HandheldCompanion.Helpers
                 smu.Dispose();
         }
 
-        private static VangoghGPU? OpenMMIO(IntPtr mmioAddress, uint mmioSize)
+        private VangoghGPU? OpenMMIO(IntPtr mmioAddress, uint mmioSize)
         {
-            var gpu = new VangoghGPU
+            var gpu = new VangoghGPU(deviceManager)
             {
                 smu = new RyzenSMU()
                 {
@@ -302,6 +307,7 @@ namespace HandheldCompanion.Helpers
             Message.PPSMC_MSG_GetAveragePower,
             Message.PPSMC_MSG_GetAverageTemperature
         };
+        private readonly Lazy<IDeviceManager> deviceManager;
 
         enum Result : byte
         {

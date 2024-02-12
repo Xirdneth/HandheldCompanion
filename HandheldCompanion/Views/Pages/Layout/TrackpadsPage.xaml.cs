@@ -1,6 +1,8 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -26,15 +28,16 @@ public partial class TrackpadsPage : ILayoutPage
     };
 
     public static List<AxisLayoutFlags> RightAxis = new() { AxisLayoutFlags.RightPad };
+    private readonly Lazy<IControllerManager> controllerManager;
 
-    public TrackpadsPage()
+    public TrackpadsPage(Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
-
+        this.controllerManager = controllerManager;
         // draw UI
         foreach (ButtonFlags button in LeftButtons)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button, controllerManager, timerManager);
             LeftTrackpadButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -42,7 +45,7 @@ public partial class TrackpadsPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in LeftAxis)
         {
-            AxisMapping axisMapping = new AxisMapping(axis);
+            AxisMapping axisMapping = new AxisMapping(axis, controllerManager, timerManager);
             LeftTrackpadPanel.Children.Add(axisMapping);
 
             AxisMappings.Add(axis, axisMapping);
@@ -50,7 +53,7 @@ public partial class TrackpadsPage : ILayoutPage
 
         foreach (ButtonFlags button in RightButtons)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button, controllerManager, timerManager);
             RightTrackpadButtonsPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -58,7 +61,7 @@ public partial class TrackpadsPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in RightAxis)
         {
-            AxisMapping axisMapping = new AxisMapping(axis);
+            AxisMapping axisMapping = new AxisMapping(axis,controllerManager, timerManager);
             RightTrackpadPanel.Children.Add(axisMapping);
 
             AxisMappings.Add(axis, axisMapping);
@@ -78,7 +81,8 @@ public partial class TrackpadsPage : ILayoutPage
         enabled = leftPad || rightPad;
     }
 
-    public TrackpadsPage(string Tag) : this()
+    public TrackpadsPage(string Tag,
+        Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         this.Tag = Tag;
     }

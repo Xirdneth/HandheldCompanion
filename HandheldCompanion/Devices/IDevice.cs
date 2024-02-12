@@ -58,7 +58,7 @@ public struct ECDetails
     public short FanValueMax;
 }
 
-public abstract class IDevice
+public class IDevice : IIDevice
 {
     public delegate void KeyPressedEventHandler(ButtonFlags button);
     public delegate void KeyReleasedEventHandler(ButtonFlags button);
@@ -142,7 +142,11 @@ public abstract class IDevice
     // UI
     protected FontFamily GlyphFontFamily = new("PromptFont");
     protected const string defaultGlyph = "\u2753";
-
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ISystemManager> systemManager;
+    private readonly Lazy<ITimerManager> timerManager;
     public ECDetails ECDetails;
 
     public string ExternalSensorName = string.Empty;
@@ -159,8 +163,20 @@ public abstract class IDevice
 
     protected USBDeviceInfo sensor = new();
 
-    public IDevice()
+    public IDevice(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ISystemManager> systemManager,
+        Lazy<ITimerManager> timerManager
+        )
     {
+        this.settingsManager = settingsManager;
+        this.powerProfileManager = powerProfileManager;
+        this.controllerManager = controllerManager;
+        this.systemManager = systemManager;
+        this.timerManager = timerManager;
+        DefaultLayout = new(controllerManager.Value,timerManager.Value);
     }
 
     public IEnumerable<ButtonFlags> OEMButtons => OEMChords.SelectMany(a => a.state.Buttons).Distinct();
@@ -169,7 +185,7 @@ public abstract class IDevice
 
     public virtual bool IsSupported => true;
 
-    public Layout DefaultLayout { get; set; } = LayoutTemplate.DefaultLayout.Layout;
+    public Layout DefaultLayout { get; set; }
 
     public event KeyPressedEventHandler KeyPressed;
     public event KeyReleasedEventHandler KeyReleased;
@@ -182,7 +198,7 @@ public abstract class IDevice
     public string Processor = string.Empty;
     public int NumberOfCores = 0;
 
-    public static IDevice GetDefault()
+    public IDevice GetDefault()
     {
         if (device is not null)
             return device;
@@ -198,247 +214,12 @@ public abstract class IDevice
 
         switch (ManufacturerName)
         {
-            case "AYN":
-                {
-                    switch (ProductName)
-                    {
-                        case "Loki MiniPro":
-                            device = new LokiMiniPro();
-                            break;
-                        case "Loki Zero":
-                            device = new LokiZero();
-                            break;
-                        case "Loki Max":
-                            switch (Processor)
-                            {
-                                case "AMD Ryzen 5 6600U with Radeon Graphics":
-                                    device = new LokiMax6600U();
-                                    break;
-                                case "AMD Ryzen 7 6800U with Radeon Graphics":
-                                    device = new LokiMax6800U();
-                                    break;
-                            }
-                            break;
-                    }
-                }
-                break;
-
-            case "AOKZOE":
-                {
-                    switch (ProductName)
-                    {
-                        case "AOKZOE A1 AR07":
-                            device = new AOKZOEA1();
-                            break;
-                        case "AOKZOE A1 Pro":
-                            device = new AOKZOEA1Pro();
-                            break;
-                    }
-                }
-                break;
-
-            case "AYADEVICE":
-            case "AYANEO":
-                {
-                    switch (ProductName)
-                    {
-                        case "AIR":
-                            device = new AYANEOAIR();
-                            break;
-                        case "AIR Pro":
-                            device = new AYANEOAIRPro();
-                            break;
-                        case "AIR 1S":
-                            device = new AYANEOAIR1S();
-                            break;
-                        case "AIR Lite":
-                            device = new AYANEOAIRLite();
-                            break;
-                        case "AYA NEO FOUNDER":
-                        case "AYANEO 2021":
-                            device = new AYANEO2021();
-                            break;
-                        case "AYANEO 2021 Pro":
-                        case "AYANEO 2021 Pro Retro Power":
-                            device = new AYANEO2021Pro();
-                            break;
-                        case "KUN":
-                            device = new AYANEOKUN();
-                            break;
-                        case "NEXT Pro":
-                        case "NEXT Advance":
-                        case "NEXT":
-                            device = new AYANEONEXT();
-                            break;
-                        case "AYANEO 2":
-                        case "GEEK":
-                            device = new AYANEO2();
-                            break;
-                        case "AB05-AMD":
-                            device = new AYANEOAIRPlusAMD();
-                            break;
-                        case "AB05-Mendocino":
-                            device = new AYANEOAIRPlusAMDMendocino();
-                            break;
-                        case "AB05-Intel":
-                            device = new AYANEOAIRPlusIntel();
-                            break;
-                        case "AYANEO 2S":
-                        case "GEEK 1S":
-                            device = new AYANEO2S();
-                            break;
-                    }
-                }
-                break;
-
-            case "CNCDAN":
-                {
-                    switch (ProductName)
-                    {
-                        case "NucDeckRev1.0":
-                            device = new NUCDeck();
-                            break;
-                    }
-                }
-                break;
-
-            case "GPD":
-                {
-                    switch (ProductName)
-                    {
-                        case "WIN2":
-                            device = new GPDWin2();
-                            break;
-                        case "G1617-01":
-                            switch (Processor)
-                            {
-                                case "AMD Ryzen 5 7640U w/ Radeon 760M Graphics":
-                                    device = new GPDWinMini_7640U();
-                                    break;
-                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
-                                    device = new GPDWinMini_7840U();
-                                    break;
-                            }
-                            break;
-                        case "G1618-03":
-                            device = new GPDWin3();
-                            break;
-                        case "G1618-04":
-                            switch (Processor)
-                            {
-                                case "AMD Ryzen 7 6800U with Radeon Graphics":
-                                    device = new GPDWin4();
-                                    break;
-                                case "AMD Ryzen 5 7640U w/ Radeon 760M Graphics":
-                                    device = new GPDWin4_2023_7640U();
-                                    break;
-                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
-                                    device = new GPDWin4_2023_7840U();
-                                    break;
-                            }
-                            break;
-                        case "G1619-03":
-                            device = new GPDWinMax2Intel();
-                            break;
-                        case "G1619-04":
-                            device = new GPDWinMax2AMD();
-                            break;
-                    }
-                }
-                break;
-
-            case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
-            case "ONE-NETBOOK":
-                {
-                    switch (ProductName)
-                    {
-                        case "ONEXPLAYER F1":
-                            {
-                                switch (Version)
-                                {
-                                    default:
-                                    case "Default string":
-                                        device = new OneXPlayerOneXFly();
-                                        break;
-                                }
-                                break;
-                            }
-                        case "ONE XPLAYER":
-                        case "ONEXPLAYER Mini Pro":
-                            {
-                                switch (Version)
-                                {
-                                    default:
-                                    case "V01":
-                                        device = new OneXPlayerMiniAMD();
-                                        break;
-                                    case "1002-C":
-                                        device = new OneXPlayerMiniIntel();
-                                        break;
-                                    case "V03":
-                                        device = new OneXPlayerMiniPro();
-                                        break;
-                                }
-                                break;
-                            }
-                        case "ONEXPLAYER mini A07":
-                            device = new OneXPlayerMiniAMD();
-                            break;
-                        case "ONEXPLAYER 2 ARP23":
-                            {
-                                switch (Version)
-                                {
-                                    default:
-                                    case "Ver.1.0":
-                                        device = new OneXPlayer2();
-                                        break;
-                                }
-                                break;
-                            }
-                        case "ONEXPLAYER 2 PRO ARP23P":
-                        case "ONEXPLAYER 2 PRO ARP23P EVA-01":
-                            switch (Version)
-                            {
-                                default:
-                                case "Version 1.0":
-                                    device = new OneXPlayer2Pro();
-                                    break;
-                            }
-                            break;
-                    }
-                }
-                break;
-
-            case "ASUSTEK COMPUTER INC.":
-                {
-                    switch (ProductName)
-                    {
-                        // Todo, figure out if theres a diff between Z1 and Z1 extreme versions
-                        case "RC71L":
-                            device = new ROGAlly();
-                            break;
-                    }
-                }
-                break;
-
-            case "VALVE":
-                {
-                    switch (ProductName)
-                    {
-                        case "Jupiter":
-                        case "Galileo":
-                            device = new SteamDeck();
-                            break;
-                    }
-                }
-                break;
-
             case "LENOVO":
                 {
                     switch (ProductName)
                     {
                         case "LNVNB161216":
-                            device = new LegionGo();
+                            device = new LegionGo(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager);
                             break;
                     }
                 }
@@ -449,7 +230,7 @@ public abstract class IDevice
 
         if (device is null)
         {
-            device = new DefaultDevice();
+            device = new DefaultDevice(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager);
             LogManager.LogWarning("Device not yet supported. The behavior of the application will be unpredictable");
         }
 
@@ -772,7 +553,7 @@ public abstract class IDevice
     {
         List<string> successes = new();
 
-        StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
+        StringCollection deviceInstanceIds = settingsManager.Value.GetStringCollection("SuspendedDevices");
 
         if (deviceInstanceIds is null)
             deviceInstanceIds = new();
@@ -786,7 +567,7 @@ public abstract class IDevice
         foreach (string InstanceId in successes)
             deviceInstanceIds.Remove(InstanceId);
 
-        SettingsManager.SetProperty("SuspendedDevices", deviceInstanceIds);
+        settingsManager.Value.SetProperty("SuspendedDevices", deviceInstanceIds);
     }
 
     protected bool SuspendDevice(string InterfaceId)
@@ -794,7 +575,7 @@ public abstract class IDevice
         PnPDevice pnPDevice = PnPDevice.GetDeviceByInterfaceId(InterfaceId);
         if (pnPDevice is not null)
         {
-            StringCollection deviceInstanceIds = SettingsManager.GetStringCollection("SuspendedDevices");
+            StringCollection deviceInstanceIds = settingsManager.Value.GetStringCollection("SuspendedDevices");
 
             if (deviceInstanceIds is null)
                 deviceInstanceIds = new();
@@ -802,7 +583,7 @@ public abstract class IDevice
             if (!deviceInstanceIds.Contains(pnPDevice.InstanceId))
                 deviceInstanceIds.Add(pnPDevice.InstanceId);
 
-            SettingsManager.SetProperty("SuspendedDevices", deviceInstanceIds);
+            settingsManager.Value.SetProperty("SuspendedDevices", deviceInstanceIds);
 
             return PnPUtil.DisableDevice(pnPDevice.InstanceId);
         }

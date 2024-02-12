@@ -13,7 +13,7 @@ using System.Windows;
 
 namespace HandheldCompanion.Managers
 {
-    public static class MotionManager
+    public class MotionManager : IMotionManager
     {
         [Flags]
         private enum SensorIndex
@@ -22,68 +22,73 @@ namespace HandheldCompanion.Managers
             Default = 1,
         }
 
-        private static Vector3[] accelerometer = new Vector3[2];
-        private static Vector3[] gyroscope = new Vector3[2];
-        private static GyroActions gyroAction = new();
+        private Vector3[] accelerometer = new Vector3[2];
+        private Vector3[] gyroscope = new Vector3[2];
+        private GyroActions gyroAction { get; set; }
 
-        private static SensorFusion sensorFusion = new();
-        private static MadgwickAHRS madgwickAHRS;
-        private static Inclination inclination = new();
+        private SensorFusion sensorFusion = new();
+        private MadgwickAHRS madgwickAHRS;
+        private Inclination inclination = new();
 
-        private static double PreviousTotalMilliseconds;
-        public static double DeltaSeconds;
+        private double PreviousTotalMilliseconds;
+        public double DeltaSeconds { get; set; }
 
-        private static IEnumerable<ButtonFlags> resetFlags = new List<ButtonFlags>() { ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4 };
+        private IEnumerable<ButtonFlags> resetFlags = new List<ButtonFlags>() { ButtonFlags.B1, ButtonFlags.B2, ButtonFlags.B3, ButtonFlags.B4 };
 
-        public static event SettingsMode0EventHandler SettingsMode0Update;
+        public event SettingsMode0EventHandler SettingsMode0Update;
         public delegate void SettingsMode0EventHandler(Vector3 gyrometer);
 
-        public static event SettingsMode1EventHandler SettingsMode1Update;
+        public event SettingsMode1EventHandler SettingsMode1Update;
         public delegate void SettingsMode1EventHandler(Vector2 deviceAngle);
 
-        public static event OverlayModelEventHandler OverlayModelUpdate;
+        public event OverlayModelEventHandler OverlayModelUpdate;
         public delegate void OverlayModelEventHandler(Vector3 euler, Quaternion quaternion);
 
-        public static bool IsInitialized;
+        public bool IsInitialized;
+        private readonly Lazy<IProfileManager> profileManager;
+        private readonly Lazy<ITimerManager> timerManager;
 
-        public static event InitializedEventHandler Initialized;
+        public event InitializedEventHandler Initialized;
         public delegate void InitializedEventHandler();
 
-        static MotionManager()
+        public MotionManager(Lazy<IProfileManager> profileManager,Lazy<ITimerManager> timerManager, Lazy<IControllerManager> controllerManager)
         {
-            float samplePeriod = TimerManager.GetPeriod() / 1000f;
+            this.profileManager = profileManager;
+            this.timerManager = timerManager;
+            float samplePeriod = timerManager.Value.GetPeriod() / 1000f;
             madgwickAHRS = new(samplePeriod, 0.01f);
+            gyroAction = new(controllerManager,timerManager);
         }
 
-        public static void Start()
+        public void Start()
         {
             IsInitialized = true;
             Initialized?.Invoke();
         }
 
-        public static void Stop()
+        public void Stop()
         {
             IsInitialized = false;
         }
 
-        public static void UpdateReport(ControllerState controllerState)
+        public void UpdateReport(ControllerState controllerState)
         {
             SetupMotion(controllerState);
             CalculateMotion(controllerState);
-            
+
             if (controllerState.ButtonState.Buttons.Intersect(resetFlags).Count() == 4)
                 madgwickAHRS.Reset();
         }
 
         // this function sets some basic motion settings, sensitivity and inverts
         // and is enough for DS4/DSU gyroscope handling
-        private static void SetupMotion(ControllerState controllerState)
+        private void SetupMotion(ControllerState controllerState)
         {
             // store raw values for later use
             accelerometer[(int)SensorIndex.Raw] = controllerState.GyroState.Accelerometer;
             gyroscope[(int)SensorIndex.Raw] = controllerState.GyroState.Gyroscope;
 
-            Profile current = ProfileManager.GetCurrent();
+            Profile current = profileManager.Value.GetCurrent();
 
             accelerometer[(int)SensorIndex.Default].Z = current.SteeringAxis == 0 ? controllerState.GyroState.Accelerometer.Z : controllerState.GyroState.Accelerometer.Y;
             accelerometer[(int)SensorIndex.Default].Y = current.SteeringAxis == 0 ? controllerState.GyroState.Accelerometer.Y : -controllerState.GyroState.Accelerometer.Z;
@@ -118,9 +123,9 @@ namespace HandheldCompanion.Managers
 
         // this function is used for advanced motion calculations used by
         // gyro to joy/mouse mappings, by UI that configures them and by 3D overlay
-        private static void CalculateMotion(ControllerState controllerState)
+        private void CalculateMotion(ControllerState controllerState)
         {
-            Profile current = ProfileManager.GetCurrent();
+            Profile current = profileManager.Value.GetCurrent();
 
             if (MainWindow.overlayModel.Visibility == Visibility.Visible && MainWindow.overlayModel.MotionActivated)
             {
@@ -145,7 +150,7 @@ namespace HandheldCompanion.Managers
                     gyroAction = action as GyroActions;
 
             // update timestamp
-            double TotalMilliseconds = TimerManager.Stopwatch.Elapsed.TotalMilliseconds;
+            double TotalMilliseconds = timerManager.Value.Stopwatch.Elapsed.TotalMilliseconds;
             DeltaSeconds = (TotalMilliseconds - PreviousTotalMilliseconds) / 1000;
             PreviousTotalMilliseconds = TotalMilliseconds;
 

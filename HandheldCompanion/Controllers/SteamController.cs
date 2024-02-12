@@ -1,5 +1,7 @@
 ﻿using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using steam_hidapi.net.Hid;
+using System;
 
 namespace HandheldCompanion.Controllers
 {
@@ -8,7 +10,7 @@ namespace HandheldCompanion.Controllers
         protected bool isConnected = false;
         protected bool isVirtualMuted = false;
 
-        public SteamController() : base()
+        public SteamController(Lazy<ISettingsManager> settingsManager, Lazy<IControllerManager> controllerManager) : base(settingsManager,controllerManager)
         {
             Capabilities |= ControllerCapabilities.MotionSensor;
         }

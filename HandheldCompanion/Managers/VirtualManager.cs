@@ -7,41 +7,62 @@ using System.Threading;
 
 namespace HandheldCompanion.Managers
 {
-    public static class VirtualManager
+    public class VirtualManager : IVirtualManager
     {
         // controllers vars
-        public static ViGEmClient vClient;
-        public static ViGEmTarget vTarget;
+        public ViGEmClient vClient { get; set; }
+        public ViGEmTarget vTarget;
 
-        private static DSUServer DSUServer;
+        private DSUServer DSUServer;
 
         // settings vars
-        public static HIDmode HIDmode = HIDmode.NoController;
-        private static HIDmode defaultHIDmode = HIDmode.NoController;
-        public static HIDstatus HIDstatus = HIDstatus.Disconnected;
+        public HIDmode HIDmode { get; set; }
+        private HIDmode defaultHIDmode { get; set; }
+        public HIDstatus HIDstatus { get; set; }
 
-        public static ushort ProductId = 0x28E; // Xbox 360
-        public static ushort VendorId = 0x45E;  // Microsoft
+        public ushort ProductId = 0x28E; // Xbox 360
+        public ushort VendorId = 0x45E;  // Microsoft
 
-        public static ushort FakeVendorId = 0x76B;  // HC
+        public ushort FakeVendorId = 0x76B;  // HC
 
-        public static bool IsInitialized;
+        public bool IsInitialized { get; set; }
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<IProfileManager> profileManager;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<IToastManager> toastManager;
+        private readonly Lazy<ITimerManager> timerManager;
+        private readonly Lazy<IVirtualManager> virtualManager;
 
-        public static event HIDChangedEventHandler HIDchanged;
+        public event HIDChangedEventHandler HIDchanged;
         public delegate void HIDChangedEventHandler(HIDmode HIDmode);
 
 
-        public static event ControllerSelectedEventHandler ControllerSelected;
+        public event ControllerSelectedEventHandler ControllerSelected;
         public delegate void ControllerSelectedEventHandler(HIDmode mode);
 
-        public static event InitializedEventHandler Initialized;
+        public event InitializedEventHandler Initialized;
         public delegate void InitializedEventHandler();
 
-        public static event VibrateEventHandler Vibrated;
+        public event VibrateEventHandler Vibrated;
         public delegate void VibrateEventHandler(byte LargeMotor, byte SmallMotor);
 
-        static VirtualManager()
+        public VirtualManager(
+            Lazy<ISettingsManager> settingsManager, 
+            Lazy<IProfileManager> profileManager, 
+            Lazy<IControllerManager> controllerManager,
+            Lazy<IToastManager> toastManager,
+            Lazy<ITimerManager> timerManager,
+            Lazy<IVirtualManager> virtualManager)
         {
+            this.settingsManager = settingsManager;
+            this.profileManager = profileManager;
+            this.controllerManager = controllerManager;
+            this.toastManager = toastManager;
+            this.timerManager = timerManager;
+            this.virtualManager = virtualManager;
+            HIDmode = HIDmode.NoController;
+            defaultHIDmode = HIDmode.NoController;
+            HIDstatus = HIDstatus.Disconnected;
             // verifying ViGEm is installed
             try
             {
@@ -54,17 +75,18 @@ namespace HandheldCompanion.Managers
             }
 
             // initialize DSUClient
-            DSUServer = new DSUServer();
+            DSUServer = new DSUServer(timerManager);
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-            SettingsManager.Initialized += SettingsManager_Initialized;
-            ProfileManager.Applied += ProfileManager_Applied;
+            settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+            settingsManager.Value.Initialized += SettingsManager_Initialized;
+            profileManager.Value.Applied += ProfileManager_Applied;
+
         }
 
-        public static void Start()
+        public void Start()
         {
             // todo: improve me !!
-            while (!ControllerManager.IsInitialized)
+            while (!controllerManager.Value.IsInitialized)
                 Thread.Sleep(250);
 
             IsInitialized = true;
@@ -73,7 +95,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has started", "VirtualManager");
         }
 
-        public static void Stop()
+        public void Stop()
         {
             if (!IsInitialized)
                 return;
@@ -82,14 +104,14 @@ namespace HandheldCompanion.Managers
             DSUServer.Stop();
 
             // unsubscrive events
-            ProfileManager.Applied -= ProfileManager_Applied;
+            profileManager.Value.Applied -= ProfileManager_Applied;
 
             IsInitialized = false;
 
             LogManager.LogInformation("{0} has stopped", "VirtualManager");
         }
 
-        public static void Resume()
+        public void Resume()
         {
             // create new ViGEm client
             if (vClient is null)
@@ -99,13 +121,13 @@ namespace HandheldCompanion.Managers
             SetControllerMode(HIDmode);
         }
 
-        public static void Suspend()
+        public void Suspend()
         {
             // reset vigem
             ResetViGEm();
         }
 
-        private static void SettingsManager_SettingValueChanged(string name, object value)
+        private void SettingsManager_SettingValueChanged(string name, object value)
         {
             switch (name)
             {
@@ -117,18 +139,18 @@ namespace HandheldCompanion.Managers
                     SetControllerStatus((HIDstatus)Convert.ToInt32(value));
                     break;
                 case "DSUEnabled":
-                    if (SettingsManager.IsInitialized)
+                    if (settingsManager.Value.IsInitialized)
                         SetDSUStatus(Convert.ToBoolean(value));
                     break;
                 case "DSUport":
                     DSUServer.port = Convert.ToInt32(value);
-                    if (SettingsManager.IsInitialized)
-                        SetDSUStatus(SettingsManager.GetBoolean("DSUEnabled"));
+                    if (settingsManager.Value.IsInitialized)
+                        SetDSUStatus(settingsManager.Value.GetBoolean("DSUEnabled"));
                     break;
             }
         }
 
-        private static void ProfileManager_Applied(Profile profile, UpdateSource source)
+        private void ProfileManager_Applied(Profile profile, UpdateSource source)
         {
             try
             {
@@ -137,7 +159,7 @@ namespace HandheldCompanion.Managers
                     return;
 
                 // todo: monitor ControllerManager and check if automatic controller management is running
-                
+
                 switch (profile.HID)
                 {
                     case HIDmode.Xbox360Controller:
@@ -161,12 +183,12 @@ namespace HandheldCompanion.Managers
         }
 
 
-        private static void SettingsManager_Initialized()
+        private void SettingsManager_Initialized()
         {
-            SetDSUStatus(SettingsManager.GetBoolean("DSUEnabled"));
+            SetDSUStatus(settingsManager.Value.GetBoolean("DSUEnabled"));
         }
 
-        private static void SetDSUStatus(bool started)
+        private void SetDSUStatus(bool started)
         {
             if (started)
                 DSUServer.Start();
@@ -174,7 +196,7 @@ namespace HandheldCompanion.Managers
                 DSUServer.Stop();
         }
 
-        public static void SetControllerMode(HIDmode mode)
+        public void SetControllerMode(HIDmode mode)
         {
             // do not disconnect if similar to previous mode
             if (HIDmode == mode && vTarget is not null)
@@ -200,13 +222,13 @@ namespace HandheldCompanion.Managers
                     }
                     break;
                 case HIDmode.DualShock4Controller:
-                    vTarget = new DualShock4Target();
+                    vTarget = new DualShock4Target(virtualManager, timerManager);
                     break;
                 case HIDmode.Xbox360Controller:
                     // Generate a new random ProductId to help the controller pick empty slot rather than getting its previous one
                     VendorId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
                     ProductId = (ushort)new Random().Next(ushort.MinValue, ushort.MaxValue);
-                    vTarget = new Xbox360Target(VendorId, ProductId);
+                    vTarget = new Xbox360Target(VendorId, ProductId,timerManager, virtualManager);
                     break;
             }
 
@@ -231,7 +253,7 @@ namespace HandheldCompanion.Managers
             HIDmode = mode;
         }
 
-        public static void SetControllerStatus(HIDstatus status)
+        public void SetControllerStatus(HIDstatus status)
         {
             if (vTarget is null)
                 return;
@@ -251,22 +273,22 @@ namespace HandheldCompanion.Managers
             HIDstatus = status;
         }
 
-        private static void OnTargetConnected(ViGEmTarget target)
+        private void OnTargetConnected(ViGEmTarget target)
         {
-            ToastManager.SendToast($"{target}", "is now connected", $"HIDmode{(uint)target.HID}");
+            toastManager.Value.SendToast($"{target}", "is now connected", $"HIDmode{(uint)target.HID}");
         }
 
-        private static void OnTargetDisconnected(ViGEmTarget target)
+        private void OnTargetDisconnected(ViGEmTarget target)
         {
-            ToastManager.SendToast($"{target}", "is now disconnected", $"HIDmode{(uint)target.HID}");
+            toastManager.Value.SendToast($"{target}", "is now disconnected", $"HIDmode{(uint)target.HID}");
         }
 
-        private static void OnTargetVibrated(byte LargeMotor, byte SmallMotor)
+        private void OnTargetVibrated(byte LargeMotor, byte SmallMotor)
         {
             Vibrated?.Invoke(LargeMotor, SmallMotor);
         }
 
-        public static void UpdateInputs(ControllerState controllerState)
+        public void UpdateInputs(ControllerState controllerState)
         {
             // DS4Touch is used by both targets below, update first
             DS4Touch.UpdateInputs(controllerState);
@@ -275,7 +297,7 @@ namespace HandheldCompanion.Managers
             DSUServer?.UpdateInputs(controllerState);
         }
 
-        private static void ResetViGEm()
+        private void ResetViGEm()
         {
             // dispose virtual controller
             if (vTarget is not null)

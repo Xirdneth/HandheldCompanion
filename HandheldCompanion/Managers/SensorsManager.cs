@@ -8,51 +8,67 @@ using static HandheldCompanion.Utils.DeviceUtils;
 
 namespace HandheldCompanion.Managers
 {
-    public static class SensorsManager
+    public class SensorsManager : ISensorsManager
     {
-        private static IMUGyrometer Gyrometer;
-        private static IMUAccelerometer Accelerometer;
-        private static SerialUSBIMU USBSensor;
+        private IMUGyrometer Gyrometer;
+        private IMUAccelerometer Accelerometer;
+        private SerialUSBIMU USBSensor;
 
-        private static SensorFamily sensorFamily;
+        private SensorFamily sensorFamily;
 
-        public static bool IsInitialized;
+        public bool IsInitialized;
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<IDeviceManager> deviceManager;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<ITimerManager> timerManager;
+        private readonly Lazy<IMotionManager> motionManager;
 
-        public static event InitializedEventHandler Initialized;
+        public event InitializedEventHandler Initialized;
         public delegate void InitializedEventHandler();
 
-        static SensorsManager()
+        public SensorsManager(
+            Lazy<ISettingsManager> settingsManager, 
+            Lazy<IDeviceManager> deviceManager, 
+            Lazy<IControllerManager> controllerManager, 
+            Lazy<ITimerManager> timerManager,
+            Lazy<IMotionManager> motionManager)
         {
-            DeviceManager.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
-            DeviceManager.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
+            this.settingsManager = settingsManager;
+            this.deviceManager = deviceManager;
+            this.controllerManager = controllerManager;
+            this.timerManager = timerManager;
+            this.motionManager = motionManager;
+            deviceManager.Value.UsbDeviceArrived += DeviceManager_UsbDeviceArrived;
+            deviceManager.Value.UsbDeviceRemoved += DeviceManager_UsbDeviceRemoved;
 
-            ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-            ControllerManager.ControllerUnplugged += ControllerManager_ControllerUnplugged;
+            controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
+            controllerManager.Value.ControllerUnplugged += ControllerManager_ControllerUnplugged;
 
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+            settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+
         }
 
-        private static void ControllerManager_ControllerSelected(IController Controller)
+        private void ControllerManager_ControllerSelected(IController Controller)
         {
             // select controller as current sensor if current sensor selection is none
             if (sensorFamily == SensorFamily.None && Controller.Capabilities.HasFlag(ControllerCapabilities.MotionSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Controller);
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.Controller);
         }
 
-        private static void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling)
+        private void ControllerManager_ControllerUnplugged(IController Controller, bool IsPowerCycling)
         {
             if (sensorFamily != SensorFamily.Controller)
                 return;
 
             // skip if controller isn't current or doesn't have motion sensor anyway
-            if (!Controller.HasMotionSensor() || Controller != ControllerManager.GetTargetController())
+            if (!Controller.HasMotionSensor() || Controller != controllerManager.Value.GetTargetController())
                 return;
-            
+
             if (sensorFamily == SensorFamily.Controller)
                 PickNextSensor();
         }
 
-        private static void DeviceManager_UsbDeviceRemoved(PnPDevice device, DeviceEventArgs obj)
+        private void DeviceManager_UsbDeviceRemoved(PnPDevice device, DeviceEventArgs obj)
         {
             if (USBSensor is null)
                 return;
@@ -63,30 +79,30 @@ namespace HandheldCompanion.Managers
             if (sensorFamily == SensorFamily.SerialUSBIMU)
                 PickNextSensor();
         }
-        
-        private static void PickNextSensor()
+
+        private void PickNextSensor()
         {
             if (MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.InternalSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Windows);
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.Windows);
             else if (MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.ExternalSensor))
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
-            else if (ControllerManager.GetTargetController() is not null && ControllerManager.GetTargetController().HasMotionSensor())
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.Controller);
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+            else if (controllerManager.Value.GetTargetController() is not null && controllerManager.Value.GetTargetController().HasMotionSensor())
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.Controller);
             else
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.None);
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.None);
         }
 
-        private static void DeviceManager_UsbDeviceArrived(PnPDevice device, DeviceEventArgs obj)
+        private void DeviceManager_UsbDeviceArrived(PnPDevice device, DeviceEventArgs obj)
         {
             // If USB Gyro is plugged, hook into it
             USBSensor = SerialUSBIMU.GetDefault();
 
             // select serial usb as current sensor if current sensor selection is none
             if (sensorFamily == SensorFamily.None)
-                SettingsManager.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
+                settingsManager.Value.SetProperty("SensorSelection", (int)SensorFamily.SerialUSBIMU);
         }
 
-        private static void SettingsManager_SettingValueChanged(string name, object value)
+        private void SettingsManager_SettingValueChanged(string name, object value)
         {
             switch (name)
             {
@@ -110,7 +126,7 @@ namespace HandheldCompanion.Managers
                         if (sensorFamily == sensorSelection)
                             return;
 
-                        switch(sensorFamily)
+                        switch (sensorFamily)
                         {
                             case SensorFamily.Windows:
                                 StopListening();
@@ -126,7 +142,7 @@ namespace HandheldCompanion.Managers
                         // update current sensorFamily
                         sensorFamily = sensorSelection;
 
-                        switch(sensorFamily)
+                        switch (sensorFamily)
                         {
                             case SensorFamily.Windows:
                                 break;
@@ -139,9 +155,9 @@ namespace HandheldCompanion.Managers
 
                                     USBSensor.Open();
 
-                                    SerialPlacement placement = (SerialPlacement)SettingsManager.GetInt("SensorPlacement");
+                                    SerialPlacement placement = (SerialPlacement)settingsManager.Value.GetInt("SensorPlacement");
                                     USBSensor.SetSensorPlacement(placement);
-                                    bool upsidedown = SettingsManager.GetBoolean("SensorPlacementUpsideDown");
+                                    bool upsidedown = settingsManager.Value.GetBoolean("SensorPlacementUpsideDown");
                                     USBSensor.SetSensorOrientation(upsidedown);
                                 }
                                 break;
@@ -155,7 +171,7 @@ namespace HandheldCompanion.Managers
             }
         }
 
-        public static void Start()
+        public void Start()
         {
             IsInitialized = true;
             Initialized?.Invoke();
@@ -163,7 +179,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has started", "SensorsManager");
         }
 
-        public static void Stop()
+        public void Stop()
         {
             if (!IsInitialized)
                 return;
@@ -175,7 +191,7 @@ namespace HandheldCompanion.Managers
             LogManager.LogInformation("{0} has stopped", "SensorsManager");
         }
 
-        public static void Resume(bool update)
+        public void Resume(bool update)
         {
             if (Gyrometer is not null)
                 Gyrometer.UpdateSensor();
@@ -184,7 +200,7 @@ namespace HandheldCompanion.Managers
                 Accelerometer.UpdateSensor();
         }
 
-        private static void StopListening()
+        private void StopListening()
         {
             // if required, halt gyrometer
             if (Gyrometer is not null)
@@ -195,9 +211,9 @@ namespace HandheldCompanion.Managers
                 Accelerometer?.StopListening();
         }
 
-        public static void UpdateReport(ControllerState controllerState)
+        public void UpdateReport(ControllerState controllerState)
         {
-            switch(sensorFamily)
+            switch (sensorFamily)
             {
                 case SensorFamily.None:
                 case SensorFamily.Controller:
@@ -211,13 +227,13 @@ namespace HandheldCompanion.Managers
                 controllerState.GyroState.Accelerometer = Accelerometer.GetCurrentReading();
         }
 
-        public static void SetSensorFamily(SensorFamily sensorFamily)
+        public void SetSensorFamily(SensorFamily sensorFamily)
         {
             // initialize sensors
-            var UpdateInterval = TimerManager.GetPeriod();
+            var UpdateInterval = timerManager.Value.GetPeriod();
 
             Gyrometer = new IMUGyrometer(sensorFamily, UpdateInterval);
-            Accelerometer = new IMUAccelerometer(sensorFamily, UpdateInterval);
+            Accelerometer = new IMUAccelerometer(sensorFamily, UpdateInterval,motionManager);
         }
     }
 }

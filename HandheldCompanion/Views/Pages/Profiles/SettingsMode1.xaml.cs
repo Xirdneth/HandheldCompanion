@@ -18,19 +18,21 @@ public partial class SettingsMode1 : Page
 
     private readonly int SteeringArraySize = 30;
     private readonly ChartValues<ObservablePoint> SteeringLinearityPoints;
+    private readonly Lazy<IMotionManager> motionManager;
 
-    public SettingsMode1()
+    public SettingsMode1(Lazy<IMotionManager> motionManager)
     {
         InitializeComponent();
+        this.motionManager = motionManager;
     }
 
-    public SettingsMode1(string Tag) : this()
+    public SettingsMode1(string Tag, Lazy<IMotionManager> motionManager) : this(motionManager)
     {
         this.Tag = Tag;
 
         lvCartesianChart.DataTooltip = null;
 
-        MotionManager.SettingsMode1Update += MotionManager_SettingsMode1Update;
+        motionManager.Value.SettingsMode1Update += MotionManager_SettingsMode1Update;
 
         SteeringLinearityPoints = new ChartValues<ObservablePoint>();
         for (var i = 0; i < SteeringArraySize; i++)

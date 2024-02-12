@@ -11,7 +11,7 @@ using Page = System.Windows.Controls.Page;
 namespace HandheldCompanion.Misc
 {
     [Serializable]
-    public class PowerProfile
+    public class PowerProfile : IPowerProfile
     {
         private string _Name;
         public string Name
@@ -54,7 +54,7 @@ namespace HandheldCompanion.Misc
         }
 
         public string FileName { get; set; }
-        public bool Default {  get; set; }
+        public bool Default { get; set; }
         public bool DeviceDefault { get; set; }
 
         public Version Version { get; set; } = new();

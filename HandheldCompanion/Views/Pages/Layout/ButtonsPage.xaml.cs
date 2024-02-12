@@ -1,6 +1,7 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -19,15 +20,17 @@ namespace HandheldCompanion.Views.Pages
         public static List<ButtonFlags> MENU = new() { ButtonFlags.Back, ButtonFlags.Start, ButtonFlags.Special, ButtonFlags.Special2 };
         public static List<ButtonFlags> BACKGRIPS = new() { ButtonFlags.L4, ButtonFlags.L5, ButtonFlags.R4, ButtonFlags.R5 };
         public static List<ButtonFlags> OEM = new() { ButtonFlags.OEM1, ButtonFlags.OEM2, ButtonFlags.OEM3, ButtonFlags.OEM4, ButtonFlags.OEM5, ButtonFlags.OEM6, ButtonFlags.OEM7, ButtonFlags.OEM8, ButtonFlags.OEM9, ButtonFlags.OEM10 };
+        private readonly Lazy<IControllerManager> controllerManager;
 
-        public ButtonsPage()
+        public ButtonsPage(Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager)
         {
             InitializeComponent();
+            this.controllerManager = controllerManager;
 
             // draw UI
             foreach (ButtonFlags button in ABXY)
             {
-                ButtonStack panel = new(button);
+                ButtonStack panel = new(button,controllerManager,timerManager);
                 ButtonsStackPanel.Children.Add(panel);
 
                 ButtonStacks.Add(button, panel);
@@ -35,7 +38,7 @@ namespace HandheldCompanion.Views.Pages
 
             foreach (ButtonFlags button in BUMPERS)
             {
-                ButtonStack panel = new(button);
+                ButtonStack panel = new(button, controllerManager, timerManager);
                 BumpersStackPanel.Children.Add(panel);
 
                 ButtonStacks.Add(button, panel);
@@ -43,7 +46,7 @@ namespace HandheldCompanion.Views.Pages
 
             foreach (ButtonFlags button in MENU)
             {
-                ButtonStack panel = new(button);
+                ButtonStack panel = new(button, controllerManager, timerManager);
                 MenuStackPanel.Children.Add(panel);
 
                 ButtonStacks.Add(button, panel);
@@ -51,7 +54,7 @@ namespace HandheldCompanion.Views.Pages
 
             foreach (ButtonFlags button in BACKGRIPS)
             {
-                ButtonStack panel = new(button);
+                ButtonStack panel = new(button, controllerManager, timerManager);
                 BackgripsStackPanel.Children.Add(panel);
 
                 ButtonStacks.Add(button, panel);
@@ -62,7 +65,7 @@ namespace HandheldCompanion.Views.Pages
                 if (!MainWindow.CurrentDevice.OEMButtons.Contains(button))
                     continue;
 
-                ButtonStack panel = new(button);
+                ButtonStack panel = new(button, controllerManager, timerManager);
                 OEMStackPanel.Children.Add(panel);
 
                 ButtonStacks.Add(button, panel);
@@ -70,6 +73,7 @@ namespace HandheldCompanion.Views.Pages
 
             // manage layout pages visibility
             gridOEM.Visibility = MainWindow.CurrentDevice.OEMButtons.Count() > 0 ? Visibility.Visible : Visibility.Collapsed;
+           
         }
 
         public override void UpdateController(IController controller)
@@ -110,7 +114,9 @@ namespace HandheldCompanion.Views.Pages
             enabled = abxy || bumpers || menu || backgrips;
         }
 
-        public ButtonsPage(string Tag) : this()
+        public ButtonsPage(string Tag,
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
         {
             this.Tag = Tag;
         }

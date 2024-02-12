@@ -19,6 +19,8 @@ namespace HandheldCompanion.Controls;
 public partial class ButtonMapping : IMapping
 {
     private static List<Label> keyList = null;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
     public ButtonMapping()
     {
@@ -37,9 +39,13 @@ public partial class ButtonMapping : IMapping
         InitializeComponent();
     }
 
-    public ButtonMapping(ButtonFlags button) : this()
+    public ButtonMapping(ButtonFlags button,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : this()
     {
         Value = button;
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
     }
 
     public void UpdateIcon(FontIcon newIcon, string newLabel)
@@ -91,7 +97,7 @@ public partial class ButtonMapping : IMapping
         TargetComboBox.IsEnabled = ActionComboBox.SelectedIndex != 0;
 
         // get current controller
-        IController controller = ControllerManager.GetEmulatedController();
+        IController controller = controllerManager.Value.GetEmulatedController();
 
         // populate target dropdown based on action type
         ActionType type = (ActionType)ActionComboBox.SelectedIndex;
@@ -106,7 +112,7 @@ public partial class ButtonMapping : IMapping
         if (type == ActionType.Button)
         {
             if (Actions is null || Actions is not ButtonActions)
-                Actions = new ButtonActions();
+                Actions = new ButtonActions(controllerManager,timerManager);
 
             foreach (ButtonFlags button in IController.GetTargetButtons())
             {
@@ -123,7 +129,7 @@ public partial class ButtonMapping : IMapping
         else if (type == ActionType.Keyboard)
         {
             if (Actions is null || Actions is not KeyboardActions)
-                Actions = new KeyboardActions();
+                Actions = new KeyboardActions(controllerManager,timerManager);
 
             // use optimized lazily created list
             TargetComboBox.ItemsSource = keyList;
@@ -136,7 +142,7 @@ public partial class ButtonMapping : IMapping
         else if (type == ActionType.Mouse)
         {
             if (Actions is null || Actions is not MouseActions)
-                Actions = new MouseActions();
+                Actions = new MouseActions(controllerManager, timerManager);
 
             foreach (MouseActionsType mouseType in Enum.GetValues(typeof(MouseActionsType)))
             {

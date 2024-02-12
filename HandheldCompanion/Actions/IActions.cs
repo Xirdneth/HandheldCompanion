@@ -70,7 +70,7 @@ namespace HandheldCompanion.Actions
     }
 
     [Serializable]
-    public abstract class IActions : ICloneable
+    public abstract class IActions : ICloneable, IIActions
     {
         public static Dictionary<ModifierSet, KeyCode[]> ModifierMap = new()
         {
@@ -110,7 +110,26 @@ namespace HandheldCompanion.Actions
         public HapticStrength HapticStrength = HapticStrength.Low;
 
         protected ScreenOrientation Orientation = ScreenOrientation.Angle0;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<ITimerManager> timerManager;
+
         public bool AutoRotate { get; set; } = false;
+
+        public IActions(
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager)
+        {
+            this.controllerManager = controllerManager;
+            this.timerManager = timerManager;
+        }
+
+        public IActions(
+            IControllerManager controllerManager,
+           ITimerManager timerManager)
+        {
+            this.controllerManager = (Lazy<IControllerManager>)controllerManager;
+            this.timerManager = (Lazy<ITimerManager>)timerManager;
+        }
 
         public IActions()
         {
@@ -122,7 +141,7 @@ namespace HandheldCompanion.Actions
             if (this.HapticMode == HapticMode.Down && up) return;
             if (this.HapticMode == HapticMode.Up && !up) return;
 
-            ControllerManager.GetTargetController()?.SetHaptic(this.HapticStrength, button);
+            controllerManager.Value.GetTargetController()?.SetHaptic(this.HapticStrength, button);
         }
 
         public virtual void Execute(ButtonFlags button, bool value)
@@ -150,7 +169,7 @@ namespace HandheldCompanion.Actions
                             actionState = ActionState.Running;
 
                             // update timer
-                            pressTimer += TimerManager.GetPeriod();
+                            pressTimer += timerManager.Value.GetPeriod();
 
                             if (pressTimer >= ActionTimer)
                             {
@@ -199,7 +218,7 @@ namespace HandheldCompanion.Actions
                                     actionState = ActionState.Aborted;
 
                                     // update timer
-                                    pressTimer -= TimerManager.GetPeriod();
+                                    pressTimer -= timerManager.Value.GetPeriod();
                                 }
                                 else
                                 {
@@ -222,7 +241,7 @@ namespace HandheldCompanion.Actions
                             actionState = ActionState.Running;
 
                             // update timer
-                            pressTimer += TimerManager.GetPeriod();
+                            pressTimer += timerManager.Value.GetPeriod();
 
                             // bypass output (simple)
                             value = true;
@@ -254,7 +273,7 @@ namespace HandheldCompanion.Actions
                                     if (actionState != ActionState.Stopped)
                                     {
                                         // update timer
-                                        pressTimer += TimerManager.GetPeriod();
+                                        pressTimer += timerManager.Value.GetPeriod();
 
                                         if (pressTimer >= 50)
                                         {
@@ -279,7 +298,7 @@ namespace HandheldCompanion.Actions
                                     actionState = ActionState.Running;
 
                                     // update timer
-                                    pressTimer += TimerManager.GetPeriod();
+                                    pressTimer += timerManager.Value.GetPeriod();
 
                                     // too slow to press again ?
                                     if (pressTimer > ActionTimer)
@@ -341,7 +360,7 @@ namespace HandheldCompanion.Actions
                     if (TurboIdx % TurboDelay == 0)
                         IsTurboed = !IsTurboed;
 
-                    TurboIdx += TimerManager.GetPeriod();
+                    TurboIdx += timerManager.Value.GetPeriod();
                 }
                 else
                 {

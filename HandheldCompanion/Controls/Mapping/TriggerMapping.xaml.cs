@@ -3,6 +3,7 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using iNKORE.UI.WPF.Modern.Controls;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,12 +14,19 @@ namespace HandheldCompanion.Controls;
 /// </summary>
 public partial class TriggerMapping : IMapping
 {
-    public TriggerMapping()
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
+
+    public TriggerMapping(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
     }
 
-    public TriggerMapping(AxisLayoutFlags axis) : this()
+    public TriggerMapping(AxisLayoutFlags axis,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         Value = axis;
 
@@ -68,7 +76,7 @@ public partial class TriggerMapping : IMapping
         TargetComboBox.IsEnabled = ActionComboBox.SelectedIndex != 0;
 
         // get current controller
-        var controller = ControllerManager.GetEmulatedController();
+        var controller = controllerManager.Value.GetEmulatedController();
 
         // populate target dropdown based on action type
         var type = (ActionType)ActionComboBox.SelectedIndex;
@@ -83,7 +91,7 @@ public partial class TriggerMapping : IMapping
         if (type == ActionType.Trigger)
         {
             if (Actions is null || Actions is not TriggerActions)
-                Actions = new TriggerActions();
+                Actions = new TriggerActions(controllerManager,timerManager);
 
             // we need a controller to get compatible buttons
             if (controller is null)

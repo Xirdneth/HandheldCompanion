@@ -1,4 +1,5 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Simulators;
 using System;
@@ -20,7 +21,7 @@ namespace HandheldCompanion.Actions
         public SpecialActionsType SpecialType;
 
         // runtime variables
-        private FlickStick flickStick = new();
+        private FlickStick flickStick { get; set; }
         private float remainder = 0;
 
         // settings
@@ -30,12 +31,14 @@ namespace HandheldCompanion.Actions
         public int FlickSpeed = 100;
         public int FlickFrontAngleDeadzone = 15;
 
-        public SpecialActions()
+        public SpecialActions(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : base(controllerManager, timerManager)
         {
             this.actionType = ActionType.Special;
+            flickStick = new(timerManager);
         }
 
-        public SpecialActions(SpecialActionsType type) : this()
+        public SpecialActions(SpecialActionsType type,
+            Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager):this(controllerManager, timerManager)
         {
             this.SpecialType = type;
         }

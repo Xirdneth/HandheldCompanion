@@ -22,34 +22,54 @@ public partial class QuickPerformancePage : Page
 {
     private const int UpdateInterval = 500;
     private readonly Timer UpdateTimer;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
     private PowerProfile selectedProfile;
 
     private LockObject updateLock = new();
 
-    public QuickPerformancePage(string Tag) : this()
+    public QuickPerformancePage(string Tag,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, platformManager, performanceManager, powerProfileManager, multimediaManager)
     {
         this.Tag = Tag;
     }
 
-    public QuickPerformancePage()
+    public QuickPerformancePage(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IMultimediaManager> multimediaManager)
     {
         InitializeComponent();
 
+        this.settingsManager = settingsManager;
+        this.platformManager = platformManager;
+        this.performanceManager = performanceManager;
+        this.powerProfileManager = powerProfileManager;
+        this.multimediaManager = multimediaManager;
         /*
-        PerformanceManager.PowerModeChanged += PerformanceManager_PowerModeChanged;
-        PerformanceManager.PerfBoostModeChanged += PerformanceManager_PerfBoostModeChanged;
-        PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
-        */
+performanceManager.Value.PowerModeChanged += PerformanceManager_PowerModeChanged;
+performanceManager.Value.PerfBoostModeChanged += PerformanceManager_PerfBoostModeChanged;
+performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
+*/
 
         // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        PlatformManager.RTSS.Updated += RTSS_Updated;
-        PerformanceManager.ProcessorStatusChanged += PerformanceManager_StatusChanged;
-        PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
-        PerformanceManager.Initialized += PerformanceManager_Initialized;
-        PowerProfileManager.Updated += PowerProfileManager_Updated;
-        PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-        MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        platformManager.Value.RTSS.Updated += RTSS_Updated;
+        performanceManager.Value.ProcessorStatusChanged += PerformanceManager_StatusChanged;
+        performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
+        performanceManager.Value.Initialized += PerformanceManager_Initialized;
+        powerProfileManager.Value.Updated += PowerProfileManager_Updated;
+        powerProfileManager.Value.Deleted += PowerProfileManager_Deleted;
+        multimediaManager.Value.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
 
         // device settings
         GPUSlider.Minimum = MainWindow.CurrentDevice.GfxClock[0];
@@ -68,7 +88,8 @@ public partial class QuickPerformancePage : Page
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // force call
-        RTSS_Updated(PlatformManager.RTSS.Status);
+        RTSS_Updated(platformManager.Value.RTSS.Status);
+        
     }
 
     private void SystemManager_PrimaryScreenChanged(DesktopScreen desktopScreen)
@@ -111,7 +132,7 @@ public partial class QuickPerformancePage : Page
             switch (status)
             {
                 case PlatformStatus.Ready:
-                    var Processor = PerformanceManager.GetProcessor();
+                    var Processor = performanceManager.Value.GetProcessor();
                     StackProfileAutoTDP.IsEnabled = true && Processor is not null ? Processor.CanChangeTDP : false;
                     break;
                 case PlatformStatus.Stalled:
@@ -136,7 +157,7 @@ public partial class QuickPerformancePage : Page
         if (selectedProfile is null)
             return;
 
-        PowerProfileManager.UpdateOrCreateProfile(selectedProfile, source);
+        powerProfileManager.Value.UpdateOrCreateProfile(selectedProfile, source);
     }
 
     private void PerformanceManager_StatusChanged(bool CanChangeTDP, bool CanChangeGPU)
@@ -145,7 +166,7 @@ public partial class QuickPerformancePage : Page
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             StackProfileTDP.IsEnabled = CanChangeTDP;
-            StackProfileAutoTDP.IsEnabled = CanChangeTDP && PlatformManager.RTSS.IsInstalled;
+            StackProfileAutoTDP.IsEnabled = CanChangeTDP && platformManager.Value.RTSS.IsInstalled;
 
             StackProfileGPUClock.IsEnabled = CanChangeGPU;
         });
@@ -162,7 +183,7 @@ public partial class QuickPerformancePage : Page
 
     private void PerformanceManager_Initialized()
     {
-        Processor processor = PerformanceManager.GetProcessor();
+        Processor processor = performanceManager.Value.GetProcessor();
         if (processor is null)
             return;
 
@@ -222,7 +243,7 @@ public partial class QuickPerformancePage : Page
         if (updateLock)
             return;
 
-        selectedProfile.OSPowerMode = PerformanceManager.PowerModes[PowerMode.SelectedIndex];
+        selectedProfile.OSPowerMode = performanceManager.Value.PowerModes[PowerMode.SelectedIndex];
         UpdateProfile();
     }
 
@@ -251,7 +272,7 @@ public partial class QuickPerformancePage : Page
             SubmitProfile();
         }
 
-        selectedProfile = PowerProfileManager.GetProfile(guid);
+        selectedProfile = powerProfileManager.Value.GetProfile(guid);
         UpdateUI();
     }
 
@@ -303,7 +324,7 @@ public partial class QuickPerformancePage : Page
                 CPUBoostLevel.SelectedIndex = selectedProfile.CPUBoostLevel;
 
                 // Power Mode
-                PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
+                PowerMode.SelectedIndex = Array.IndexOf(performanceManager.Value.PowerModes, selectedProfile.OSPowerMode);
 
                 // Fan control
                 FanMode.SelectedIndex = (int)selectedProfile.FanProfile.fanMode;
@@ -508,7 +529,7 @@ public partial class QuickPerformancePage : Page
         switch (result.Result)
         {
             case ContentDialogResult.Primary:
-                PowerProfileManager.DeleteProfile(selectedProfile);
+                powerProfileManager.Value.DeleteProfile(selectedProfile);
                 break;
         }
     }

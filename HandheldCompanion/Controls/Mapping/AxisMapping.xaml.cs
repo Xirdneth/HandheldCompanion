@@ -15,12 +15,20 @@ namespace HandheldCompanion.Controls;
 /// </summary>
 public partial class AxisMapping : IMapping
 {
-    public AxisMapping()
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
+
+    public AxisMapping(Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
     }
 
-    public AxisMapping(AxisLayoutFlags axis) : this()
+    public AxisMapping(AxisLayoutFlags axis,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         Value = axis;
 
@@ -70,7 +78,7 @@ public partial class AxisMapping : IMapping
         TargetComboBox.IsEnabled = ActionComboBox.SelectedIndex != 0;
 
         // get current controller
-        IController? controller = ControllerManager.GetEmulatedController();
+        IController? controller = controllerManager.Value.GetEmulatedController();
 
         // populate target dropdown based on action type
         ActionType type = (ActionType)ActionComboBox.SelectedIndex;
@@ -85,7 +93,7 @@ public partial class AxisMapping : IMapping
         if (type == ActionType.Joystick)
         {
             if (Actions is null || Actions is not AxisActions)
-                Actions = new AxisActions();
+                Actions = new AxisActions(controllerManager,timerManager);
 
             // we need a controller to get compatible buttons
             if (controller is null)
@@ -113,7 +121,7 @@ public partial class AxisMapping : IMapping
         else if (type == ActionType.Mouse)
         {
             if (Actions is null || Actions is not MouseActions)
-                Actions = new MouseActions();
+                Actions = new MouseActions(controllerManager,timerManager);
 
             foreach (MouseActionsType mouseType in Enum.GetValues(typeof(MouseActionsType)))
             {

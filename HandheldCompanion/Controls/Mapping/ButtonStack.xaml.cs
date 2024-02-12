@@ -1,6 +1,8 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using iNKORE.UI.WPF.Modern.Controls;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,25 +21,33 @@ namespace HandheldCompanion.Controls
         static Thickness padding = new(2, 2, 0, 0);
 
         private ButtonFlags button;
+        private readonly Lazy<IControllerManager> controllerManager;
+        private readonly Lazy<ITimerManager> timerManager;
 
         public event UpdatedEventHandler Updated;
         public delegate void UpdatedEventHandler(object sender, List<IActions> actions);
         public event DeletedEventHandler Deleted;
         public delegate void DeletedEventHandler(object sender);
 
-        public ButtonStack() : base()
+        public ButtonStack(
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) : base()
         {
             InitializeComponent();
+            this.controllerManager = controllerManager;
+            this.timerManager = timerManager;
         }
 
-        public ButtonStack(ButtonFlags button) : this()
+        public ButtonStack(ButtonFlags button,
+            Lazy<IControllerManager> controllerManager, 
+            Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
         {
             this.button = button;
 
             // remove the xaml reference entry
             getGrid(0).Children.Clear(); Children.Clear();
             // add the first one and never remove it, only modify
-            AddMappingToChildren(new ButtonMapping(button));
+            AddMappingToChildren(new ButtonMapping(button,controllerManager,timerManager));
         }
 
         private Grid getGrid(int index)
@@ -78,7 +88,7 @@ namespace HandheldCompanion.Controls
                 // we need more
                 else
                 {
-                    ButtonMapping mapping = new(button);
+                    ButtonMapping mapping = new(button, controllerManager, timerManager);
                     mapping.SetIActions(action);
                     AddMappingToChildren(mapping);
                 }
@@ -173,7 +183,7 @@ namespace HandheldCompanion.Controls
             // Add
             if (index == 0)
             {
-                ButtonMapping mapping = new(button);
+                ButtonMapping mapping = new(button, controllerManager, timerManager);
                 AddMappingToChildren(mapping);
                 // no need to register new mapping, it's empty, will be updated with event
             }

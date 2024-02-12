@@ -1,21 +1,32 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using System;
 using static JSL;
 
 namespace HandheldCompanion.Controllers;
 
 public class ProController : JSController
 {
-    public ProController()
+    private readonly Lazy<ITimerManager> timerManager;
+
+    public ProController(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) :base(settingsManager,controllerManager)
     {
+        this.timerManager = timerManager;
     }
 
-    public ProController(JOY_SETTINGS settings, PnPDetails details) : base(settings, details)
+    public ProController(JOY_SETTINGS settings, PnPDetails details,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : base(settings, details, settingsManager, controllerManager)
     {
         // Additional controller specific source buttons
         SourceButtons.Add(ButtonFlags.Special2);
         SourceAxis.Add(AxisLayoutFlags.Gyroscope);
+        this.timerManager = timerManager;
     }
 
     public override void UpdateInputs(long ticks)
@@ -38,13 +49,13 @@ public class ProController : JSController
 
     public override void Plug()
     {
-        TimerManager.Tick += UpdateInputs;
+        timerManager.Value.Tick += UpdateInputs;
         base.Plug();
     }
 
     public override void Unplug()
     {
-        TimerManager.Tick -= UpdateInputs;
+        timerManager.Value.Tick -= UpdateInputs;
         base.Unplug();
     }
 

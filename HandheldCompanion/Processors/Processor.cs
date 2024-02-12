@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Helpers;
+using HandheldCompanion.Managers;
 using System.Collections.Generic;
 using System.Timers;
 
@@ -14,13 +15,13 @@ public enum PowerType
     MsrFast = 4
 }
 
-public class Processor
+public class Processor : IProcessor
 {
     private static Processor processor;
     private static string Manufacturer;
 
     protected readonly Timer updateTimer = new() { Interval = 3000, AutoReset = true };
-
+    private readonly IVangoghGPU vangoghGPU;
     public bool CanChangeTDP, CanChangeGPU;
     protected object IsBusy = new();
     public bool IsInitialized;
@@ -36,14 +37,15 @@ public class Processor
 
     protected static string Name, ProcessorID;
 
-    static Processor()
+    public Processor(IVangoghGPU vangoghGPU)
     {
         Name = MotherboardInfo.ProcessorName;
         ProcessorID = MotherboardInfo.ProcessorID;
         Manufacturer = MotherboardInfo.ProcessorManufacturer;
+        this.vangoghGPU = vangoghGPU;
     }
 
-    public static Processor GetCurrent()
+    public Processor GetCurrent()
     {
         if (processor is not null)
             return processor;
@@ -51,10 +53,10 @@ public class Processor
         switch (Manufacturer)
         {
             case "GenuineIntel":
-                processor = new IntelProcessor();
+                processor = new IntelProcessor(vangoghGPU);
                 break;
             case "AuthenticAMD":
-                processor = new AMDProcessor();
+                processor = new AMDProcessor(vangoghGPU);
                 break;
         }
         // write default miscs

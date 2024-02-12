@@ -15,25 +15,41 @@ public partial class QuickHomePage : Page
 {
     private LockObject brightnessLock = new();
     private LockObject volumeLock = new();
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IProfileManager> profileManager;
 
-    public QuickHomePage(string Tag) : this()
+    public QuickHomePage(string Tag,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IHotkeysManager> hotkeysManager,
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IProfileManager> profileManager) : this(settingsManager, hotkeysManager, multimediaManager, profileManager)
     {
         this.Tag = Tag;
 
-        HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
-        HotkeysManager.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
+        hotkeysManager.Value.HotkeyCreated += HotkeysManager_HotkeyCreated;
+        hotkeysManager.Value.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
 
-        MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
-        MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
-        MultimediaManager.Initialized += SystemManager_Initialized;
+        multimediaManager.Value.VolumeNotification += SystemManager_VolumeNotification;
+        multimediaManager.Value.BrightnessNotification += SystemManager_BrightnessNotification;
+        multimediaManager.Value.Initialized += SystemManager_Initialized;
 
-        ProfileManager.Applied += ProfileManager_Applied;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
-    public QuickHomePage()
+    public QuickHomePage(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IMultimediaManager> multimediaManager, 
+        Lazy<IProfileManager> profileManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.hotkeysManager = hotkeysManager;
+        this.multimediaManager = multimediaManager;
+        this.profileManager = profileManager;
     }
 
     private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
@@ -51,7 +67,7 @@ public partial class QuickHomePage : Page
         // todo, implement quick hotkey order
         QuickHotkeys.Children.Clear();
 
-        foreach (var hotkey in HotkeysManager.Hotkeys.Values.Where(item => item.IsPinned))
+        foreach (var hotkey in hotkeysManager.Value.Hotkeys.Values.Where(item => item.IsPinned))
             QuickHotkeys.Children.Add(hotkey.GetPin());
     }
 
@@ -66,16 +82,16 @@ public partial class QuickHomePage : Page
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            if (MultimediaManager.HasBrightnessSupport())
+            if (multimediaManager.Value.HasBrightnessSupport())
             {
                 SliderBrightness.IsEnabled = true;
-                SliderBrightness.Value = MultimediaManager.GetBrightness();
+                SliderBrightness.Value = multimediaManager.Value.GetBrightness();
             }
 
-            if (MultimediaManager.HasVolumeSupport())
+            if (multimediaManager.Value.HasVolumeSupport())
             {
                 SliderVolume.IsEnabled = true;
-                SliderVolume.Value = MultimediaManager.GetVolume();
+                SliderVolume.Value = multimediaManager.Value.GetVolume();
                 UpdateVolumeIcon((float)SliderVolume.Value);
             }
         });
@@ -113,7 +129,7 @@ public partial class QuickHomePage : Page
         if (brightnessLock)
             return;
 
-       MultimediaManager.SetBrightness(SliderBrightness.Value);
+       multimediaManager.Value.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -125,7 +141,7 @@ public partial class QuickHomePage : Page
         if (volumeLock)
             return;
 
-        MultimediaManager.SetVolume(SliderVolume.Value);
+        multimediaManager.Value.SetVolume(SliderVolume.Value);
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)

@@ -1,4 +1,5 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using System;
 
@@ -25,7 +26,17 @@ namespace HandheldCompanion.Actions
         public const int DefaultDeadzone = 10;
         public const float DefaultGyroWeight = 1.2f;
 
-        public GyroActions()
+        public GyroActions(Lazy<IControllerManager> controllerManager , Lazy<ITimerManager> timerManager):base(controllerManager,timerManager)
+        {
+        }
+
+        public GyroActions() : base()
+        {
+        }
+
+        public GyroActions(
+           IControllerManager controllerManager,
+           ITimerManager timerManager) : base(controllerManager, timerManager)
         {
         }
     }

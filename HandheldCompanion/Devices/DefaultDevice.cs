@@ -1,8 +1,17 @@
-﻿namespace HandheldCompanion.Devices;
+﻿using HandheldCompanion.Controls;
+using HandheldCompanion.Managers;
+using System;
+
+namespace HandheldCompanion.Devices;
 
 public class DefaultDevice : IDevice
 {
-    public DefaultDevice()
+    public DefaultDevice(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ISystemManager> systemManager,
+        Lazy<ITimerManager> timerManager) : base(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager)
     {
         // We assume all the devices have those keys
         // Disabled until we implement "turbo" type hotkeys

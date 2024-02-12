@@ -31,12 +31,26 @@ namespace HandheldCompanion.Views.Pages
         private LockObject updateLock = new();
 
         private const int UpdateInterval = 500;
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<IPowerProfileManager> powerProfileManager;
+        private readonly Lazy<IPerformanceManager> performanceManager;
+        private readonly Lazy<IPlatformManager> platformManager;
+        private readonly Lazy<IMultimediaManager> multimediaManager;
         private static Timer UpdateTimer;
 
-        public PerformancePage()
+        public PerformancePage(
+            Lazy<ISettingsManager> settingsManager,
+            Lazy<IPowerProfileManager> powerProfileManager,
+            Lazy<IPerformanceManager> performanceManager,
+            Lazy<IPlatformManager> platformManager,
+            Lazy<IMultimediaManager> multimediaManager)
         {
             InitializeComponent();
-
+            this.settingsManager = settingsManager;
+            this.powerProfileManager = powerProfileManager;
+            this.performanceManager = performanceManager;
+            this.platformManager = platformManager;
+            this.multimediaManager = multimediaManager;
             DataContext = new ViewModel();
             lvLineSeries.ActualValues.CollectionChanged += ActualValues_CollectionChanged;
 
@@ -45,18 +59,23 @@ namespace HandheldCompanion.Views.Pages
             UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
         }
 
-        public PerformancePage(string? Tag) : this()
+        public PerformancePage(string? Tag,
+            Lazy<ISettingsManager> settingsManager,
+            Lazy<IPowerProfileManager> powerProfileManager,
+            Lazy<IPerformanceManager> performanceManager,
+             Lazy<IPlatformManager> platformManager,
+             Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, powerProfileManager, performanceManager, platformManager, multimediaManager)
         {
             this.Tag = Tag;
 
             // manage events
-            SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-            PowerProfileManager.Updated += PowerProfileManager_Updated;
-            PowerProfileManager.Deleted += PowerProfileManager_Deleted;
-            PerformanceManager.ProcessorStatusChanged += PerformanceManager_StatusChanged;
-            PerformanceManager.EPPChanged += PerformanceManager_EPPChanged;
-            PerformanceManager.Initialized += PerformanceManager_Initialized;
-            MultimediaManager.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
+            settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+            powerProfileManager.Value.Updated += PowerProfileManager_Updated;
+            powerProfileManager.Value.Deleted += PowerProfileManager_Deleted;
+            performanceManager.Value.ProcessorStatusChanged += PerformanceManager_StatusChanged;
+            performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
+            performanceManager.Value.Initialized += PerformanceManager_Initialized;
+            multimediaManager.Value.PrimaryScreenChanged += SystemManager_PrimaryScreenChanged;
 
             // device settings
             GPUSlider.Minimum = MainWindow.CurrentDevice.GfxClock[0];
@@ -209,7 +228,7 @@ namespace HandheldCompanion.Views.Pages
             if (selectedProfile is null)
                 return;
 
-            PowerProfileManager.UpdateOrCreateProfile(selectedProfile, source);
+            powerProfileManager.Value.UpdateOrCreateProfile(selectedProfile, source);
         }
 
         private void PerformanceManager_StatusChanged(bool CanChangeTDP, bool CanChangeGPU)
@@ -218,7 +237,7 @@ namespace HandheldCompanion.Views.Pages
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 StackProfileTDP.IsEnabled = CanChangeTDP;
-                StackProfileAutoTDP.IsEnabled = CanChangeTDP && PlatformManager.RTSS.IsInstalled;
+                StackProfileAutoTDP.IsEnabled = CanChangeTDP && platformManager.Value.RTSS.IsInstalled;
 
                 StackProfileGPUClock.IsEnabled = CanChangeGPU;
             });
@@ -235,7 +254,7 @@ namespace HandheldCompanion.Views.Pages
 
         private void PerformanceManager_Initialized()
         {
-            Processor processor = PerformanceManager.GetProcessor();
+            Processor processor = performanceManager.Value.GetProcessor();
             if (processor is null)
                 return;
 
@@ -328,12 +347,12 @@ namespace HandheldCompanion.Views.Pages
 
         private void ButtonProfileCreate_Click(object sender, RoutedEventArgs e)
         {
-            int idx = PowerProfileManager.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
+            int idx = powerProfileManager.Value.profiles.Values.Where(p => !p.IsDefault()).Count() + 1;
 
             string Name = string.Format(Properties.Resources.PowerProfileManualName, idx);
             PowerProfile powerProfile = new PowerProfile(Name, Properties.Resources.PowerProfileManualDescription);
 
-            PowerProfileManager.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
+            powerProfileManager.Value.UpdateOrCreateProfile(powerProfile, UpdateSource.Creation);
         }
 
         private async void ButtonProfileDelete_Click(object sender, RoutedEventArgs e)
@@ -349,7 +368,7 @@ namespace HandheldCompanion.Views.Pages
             switch (result.Result)
             {
                 case ContentDialogResult.Primary:
-                    PowerProfileManager.DeleteProfile(selectedProfile);
+                    powerProfileManager.Value.DeleteProfile(selectedProfile);
                     ProfilesPicker.SelectedIndex = 1;
                     break;
             }
@@ -454,8 +473,8 @@ namespace HandheldCompanion.Views.Pages
                     TDPSlider.Value = TDP[(int)PowerType.Slow];
 
                     // define slider(s) min and max values based on device specifications
-                    TDPSlider.Minimum = SettingsManager.GetInt("ConfigurableTDPOverrideDown");
-                    TDPSlider.Maximum = SettingsManager.GetInt("ConfigurableTDPOverrideUp");
+                    TDPSlider.Minimum = settingsManager.Value.GetInt("ConfigurableTDPOverrideDown");
+                    TDPSlider.Maximum = settingsManager.Value.GetInt("ConfigurableTDPOverrideUp");
 
                     // Automatic TDP
                     AutoTDPToggle.IsOn = selectedProfile.AutoTDPEnabled;
@@ -481,7 +500,7 @@ namespace HandheldCompanion.Views.Pages
                     CPUBoostLevel.SelectedIndex = selectedProfile.CPUBoostLevel;
 
                     // Power Mode
-                    PowerMode.SelectedIndex = Array.IndexOf(PerformanceManager.PowerModes, selectedProfile.OSPowerMode);
+                    PowerMode.SelectedIndex = Array.IndexOf(performanceManager.Value.PowerModes, selectedProfile.OSPowerMode);
 
                     // Fan control
                     FanMode.SelectedIndex = (int)selectedProfile.FanProfile.fanMode;
@@ -700,7 +719,7 @@ namespace HandheldCompanion.Views.Pages
             if (updateLock)
                 return;
 
-            selectedProfile.OSPowerMode = PerformanceManager.PowerModes[PowerMode.SelectedIndex];
+            selectedProfile.OSPowerMode = performanceManager.Value.PowerModes[PowerMode.SelectedIndex];
             UpdateProfile();
         }
 

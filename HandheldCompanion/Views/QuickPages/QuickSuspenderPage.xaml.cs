@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -10,21 +11,25 @@ namespace HandheldCompanion.Views.QuickPages;
 /// </summary>
 public partial class QuickSuspenderPage : Page
 {
-    public QuickSuspenderPage(string Tag) : this()
+    private readonly Lazy<IProcessManager> processManager;
+
+    public QuickSuspenderPage(string Tag,
+        Lazy<IProcessManager> processManager) : this(processManager)
     {
         this.Tag = Tag;
     }
 
-    public QuickSuspenderPage()
+    public QuickSuspenderPage(Lazy<IProcessManager> processManager)
     {
         InitializeComponent();
 
-        ProcessManager.ProcessStarted += ProcessStarted;
-        ProcessManager.ProcessStopped += ProcessStopped;
+        processManager.Value.ProcessStarted += ProcessStarted;
+        processManager.Value.ProcessStopped += ProcessStopped;
 
         // get processes
-        foreach (ProcessEx processEx in ProcessManager.GetProcesses())
+        foreach (ProcessEx processEx in processManager.Value.GetProcesses())
             ProcessStarted(processEx, true);
+        this.processManager = processManager;
     }
 
     private void ProcessStopped(ProcessEx processEx)

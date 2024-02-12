@@ -24,6 +24,12 @@ namespace HandheldCompanion.Misc
         private double PreviousTotalMilliSeconds;
 
         private readonly int FlickFinetune = 62;
+        private readonly Lazy<ITimerManager> timerManager;
+
+        public FlickStick(Lazy<ITimerManager> timerManager)
+        {
+            this.timerManager = timerManager;
+        }
 
         // Flick stick, flick to initial angle, allow for stick rotation in horizontal plane after
         public float Handle(Vector2 Stick, float FlickSensitivity, float SweepSensitivity, float FlickThreshold, int FlickSpeed, int FlickFrontAngleDeadzone)
@@ -45,7 +51,7 @@ namespace HandheldCompanion.Misc
             // Settings
             float TurnSmoothThreshold = 0.1f;
 
-            double TotalMilliseconds = TimerManager.Stopwatch.Elapsed.TotalMilliseconds;
+            double TotalMilliseconds = timerManager.Value.Stopwatch.Elapsed.TotalMilliseconds;
             double DeltaTimeSeconds = (TotalMilliseconds - PreviousTotalMilliSeconds) / 1000L;
             double rate = 1.0 / (TotalMilliseconds - PreviousTotalMilliSeconds);
             PreviousTotalMilliSeconds = TotalMilliseconds;

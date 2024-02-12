@@ -1,5 +1,6 @@
 using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Simulators;
 using System;
 using WindowsInput.Events;
@@ -17,8 +18,7 @@ namespace HandheldCompanion.Actions
 
         // settings
         public ModifierSet Modifiers = ModifierSet.None;
-
-        public KeyboardActions()
+        public KeyboardActions(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : base(controllerManager, timerManager)
         {
             this.actionType = ActionType.Keyboard;
 
@@ -26,7 +26,16 @@ namespace HandheldCompanion.Actions
             this.prevValue = false;
         }
 
-        public KeyboardActions(VirtualKeyCode key) : this()
+        public KeyboardActions() : base()
+        {
+            this.actionType = ActionType.Keyboard;
+
+            this.Value = false;
+            this.prevValue = false;
+        }
+
+        public KeyboardActions(VirtualKeyCode key,
+            Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager):this(controllerManager, timerManager)
         {
             this.Key = key;
         }

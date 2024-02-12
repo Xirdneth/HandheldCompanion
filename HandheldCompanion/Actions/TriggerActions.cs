@@ -1,4 +1,5 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using System;
 
@@ -14,13 +15,19 @@ namespace HandheldCompanion.Actions
         public int AxisDeadZoneInner = 0;
         public int AxisDeadZoneOuter = 0;
 
-        public TriggerActions()
+        public TriggerActions() : base()
+        {
+            this.actionType = ActionType.Trigger;
+            this.Value = (short)0;
+        }
+        public TriggerActions(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : base(controllerManager, timerManager)
         {
             this.actionType = ActionType.Trigger;
             this.Value = (short)0;
         }
 
-        public TriggerActions(AxisLayoutFlags axis) : this()
+        public TriggerActions(AxisLayoutFlags axis,
+            Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager):this(controllerManager, timerManager)
         {
             this.Axis = axis;
         }

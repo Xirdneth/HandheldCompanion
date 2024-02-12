@@ -1,4 +1,6 @@
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using Newtonsoft.Json;
 using System;
 
 namespace HandheldCompanion.Actions
@@ -11,7 +13,9 @@ namespace HandheldCompanion.Actions
         // runtime variables
         private bool IsKeyDown = false;
 
-        public ButtonActions()
+        public ButtonActions(
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) :base(controllerManager,timerManager)
         {
             this.actionType = ActionType.Button;
 
@@ -19,7 +23,26 @@ namespace HandheldCompanion.Actions
             this.prevValue = false;
         }
 
-        public ButtonActions(ButtonFlags button) : this()
+        [JsonConstructor]
+        public ButtonActions() : base()
+        {
+            this.actionType = ActionType.Button;
+
+            this.Value = false;
+            this.prevValue = false;
+        }
+
+ 
+        public ButtonActions(ButtonFlags button,
+            IControllerManager controllerManager,
+            ITimerManager timerManager) :base(controllerManager, timerManager)
+        {
+            this.Button = button;
+        }
+
+        public ButtonActions(ButtonFlags button,
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
         {
             this.Button = button;
         }

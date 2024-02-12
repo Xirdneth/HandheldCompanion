@@ -1,9 +1,10 @@
 using LibreHardwareMonitor.Hardware;
+using System.Diagnostics;
 using System.Timers;
 
 namespace HandheldCompanion.Platforms
 {
-    public class LibreHardwareMonitor : IPlatform
+    public class LibreHardwareMonitor : IPlatform, ILibreHardwareMonitor
     {
         private Computer computer;
         private string ProductName;
@@ -21,6 +22,7 @@ namespace HandheldCompanion.Platforms
         public float? BatteryLevel;
         public float? BatteryPower;
         public float? BatteryTimeSpan;
+
 
         public LibreHardwareMonitor()
         {
@@ -237,6 +239,66 @@ namespace HandheldCompanion.Platforms
                 BatteryTimeSpanChanged?.Invoke(BatteryTimeSpan);
             }
         }
+
+        public void Dispose()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public string GetInstallPath()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public string GetName()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public string GetSetting(string key)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public string GetSettingsPath()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool IsFileOverwritten(string FilePath, byte[] content)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool IsRelated(Process proc)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool KillProcess()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool OverwriteFile(string FilePath, byte[] content, bool backup)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool ResetFile(string FilePath)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool StartProcess()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool StopProcess()
+        {
+            throw new System.NotImplementedException();
+        }
         #endregion
 
         #region events
@@ -252,6 +314,8 @@ namespace HandheldCompanion.Platforms
         public event ChangedHandler BatteryLevelChanged;
         public event ChangedHandler BatteryPowerChanged;
         public event ChangedHandler BatteryTimeSpanChanged;
+        public event IPlatform.SettingValueChangedEventHandler SettingValueChanged;
+        public event IPlatform.StartedEventHandler Updated;
         #endregion
     }
 }

@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using HidLibrary;
 using System;
@@ -94,7 +95,11 @@ namespace HandheldCompanion.Controllers
         private long lastTap = 0;
         private Vector2 lastTapPosition = Vector2.Zero; // The current position of the touchpad
 
-        public LegionController(PnPDetails details) : base(details)
+        public LegionController(PnPDetails details,
+            Lazy<IDeviceManager> deviceManager,
+            Lazy<ITimerManager> timerManager,
+            Lazy<ISettingsManager> settingsManager,
+            Lazy<IControllerManager> controllerManager) : base(details,deviceManager,timerManager,settingsManager,controllerManager)
         {
             // Additional controller specific source buttons
             SourceButtons.Add(ButtonFlags.RightPadTouch);

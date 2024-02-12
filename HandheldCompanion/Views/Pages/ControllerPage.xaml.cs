@@ -19,22 +19,48 @@ public partial class ControllerPage : Page
     // controllers vars
     private HIDmode controllerMode = HIDmode.NoController;
     private HIDstatus controllerStatus = HIDstatus.Disconnected;
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<ILayoutManager> layoutManager;
+    private readonly Lazy<IVirtualManager> virtualManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    public ControllerPage()
+    public ControllerPage(
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<ILayoutManager> layoutManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.profileManager = profileManager;
+        this.layoutManager = layoutManager;
+        this.virtualManager = virtualManager;
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
 
         // manage events
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-        ControllerManager.ControllerPlugged += ControllerPlugged;
-        ControllerManager.ControllerUnplugged += ControllerUnplugged;
-        ControllerManager.ControllerSelected += ControllerManager_ControllerSelected;
-        ControllerManager.Working += ControllerManager_Working;
-        ProfileManager.Applied += ProfileManager_Applied;
-        VirtualManager.ControllerSelected += VirtualManager_ControllerSelected;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+        controllerManager.Value.ControllerPlugged += ControllerPlugged;
+        controllerManager.Value.ControllerUnplugged += ControllerUnplugged;
+        controllerManager.Value.ControllerSelected += ControllerManager_ControllerSelected;
+        controllerManager.Value.Working += ControllerManager_Working;
+        profileManager.Value.Applied += ProfileManager_Applied;
+        virtualManager.Value.ControllerSelected += VirtualManager_ControllerSelected;
+       
     }
 
-    public ControllerPage(string Tag) : this()
+    public ControllerPage(string Tag,
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<ILayoutManager> layoutManager,
+        Lazy<IVirtualManager> virtualManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<ITimerManager> timerManager) : this(settingsManager, profileManager, layoutManager, virtualManager, controllerManager, timerManager)
     {
         this.Tag = Tag;
     }
@@ -230,7 +256,7 @@ public partial class ControllerPage : Page
             return;
 
         var path = Controller.GetContainerInstancePath();
-        ControllerManager.SetTargetController(path, false);
+        controllerManager.Value.SetTargetController(path, false);
 
         ControllerRefresh();
     }
@@ -250,11 +276,11 @@ public partial class ControllerPage : Page
 
     private void ControllerRefresh()
     {
-        IController targetController = ControllerManager.GetTargetController();
-        bool hasPhysical = ControllerManager.HasPhysicalController();
-        bool hasVirtual = ControllerManager.HasVirtualController();
+        IController targetController = controllerManager.Value.GetTargetController();
+        bool hasPhysical = controllerManager.Value.HasPhysicalController();
+        bool hasVirtual = controllerManager.Value.HasVirtualController();
         bool hasTarget = targetController != null;
-        bool isMuted = SettingsManager.GetBoolean("SteamControllerMute");
+        bool isMuted = settingsManager.Value.GetBoolean("SteamControllerMute");
 
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
@@ -300,10 +326,10 @@ public partial class ControllerPage : Page
         controllerMode = (HIDmode)cB_HidMode.SelectedIndex;
 
         // only change HIDmode setting if current profile is default or set to default controller
-        var currentProfile = ProfileManager.GetCurrent();
+        var currentProfile = profileManager.Value.GetCurrent();
         if (currentProfile.Default || (HIDmode)currentProfile.HID == HIDmode.NotSelected)
         {
-            SettingsManager.SetProperty("HIDmode", cB_HidMode.SelectedIndex);
+            settingsManager.Value.SetProperty("HIDmode", cB_HidMode.SelectedIndex);
         }
     }
 
@@ -314,7 +340,7 @@ public partial class ControllerPage : Page
 
         controllerStatus = (HIDstatus)cB_ServiceSwitch.SelectedIndex;
 
-        SettingsManager.SetProperty("HIDstatus", cB_ServiceSwitch.SelectedIndex);
+        settingsManager.Value.SetProperty("HIDstatus", cB_ServiceSwitch.SelectedIndex);
     }
 
     private void Toggle_Cloaked_Toggled(object sender, RoutedEventArgs e)
@@ -322,7 +348,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDcloakonconnect", Toggle_Cloaked.IsOn);
+        settingsManager.Value.SetProperty("HIDcloakonconnect", Toggle_Cloaked.IsOn);
     }
 
     private void Toggle_Uncloak_Toggled(object sender, RoutedEventArgs e)
@@ -330,7 +356,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDuncloakonclose", Toggle_Uncloak.IsOn);
+        settingsManager.Value.SetProperty("HIDuncloakonclose", Toggle_Uncloak.IsOn);
     }
 
     private void SliderStrength_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -344,7 +370,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("VibrationStrength", value);
+        settingsManager.Value.SetProperty("VibrationStrength", value);
     }
 
     private void Toggle_SCMuteController_Toggled(object sender, RoutedEventArgs e)
@@ -352,7 +378,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("SteamControllerMute", Toggle_SCMuteController.IsOn);
+        settingsManager.Value.SetProperty("SteamControllerMute", Toggle_SCMuteController.IsOn);
     }
 
     private void Toggle_Vibrate_Toggled(object sender, RoutedEventArgs e)
@@ -360,7 +386,7 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
+        settingsManager.Value.SetProperty("HIDvibrateonconnect", Toggle_Vibrate.IsOn);
     }
 
     private void Toggle_ControllerManagement_Toggled(object sender, RoutedEventArgs e)
@@ -368,13 +394,13 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("ControllerManagement", Toggle_ControllerManagement.IsOn);
+        settingsManager.Value.SetProperty("ControllerManagement", Toggle_ControllerManagement.IsOn);
     }
 
     private void Button_Layout_Click(object sender, RoutedEventArgs e)
     {
         // prepare layout editor, desktopLayout gets saved automatically
-        LayoutTemplate desktopTemplate = new(LayoutManager.GetDesktop())
+        LayoutTemplate desktopTemplate = new(layoutManager.Value.GetDesktop(),controllerManager,timerManager)
         {
             Name = LayoutTemplate.DesktopLayout.Name,
             Description = LayoutTemplate.DesktopLayout.Description,
@@ -392,7 +418,7 @@ public partial class ControllerPage : Page
             return;
 
         // temporary settings
-        SettingsManager.SetProperty("DesktopLayoutEnabled", Toggle_DesktopLayout.IsOn, false, true);
+        settingsManager.Value.SetProperty("DesktopLayoutEnabled", Toggle_DesktopLayout.IsOn, false, true);
     }
 
     private void Expander_Expanded(object sender, RoutedEventArgs e)
@@ -405,6 +431,6 @@ public partial class ControllerPage : Page
         if (!IsLoaded)
             return;
 
-        SettingsManager.SetProperty("LegionControllerPassthrough", Toggle_TouchpadPassthrough.IsOn);
+        settingsManager.Value.SetProperty("LegionControllerPassthrough", Toggle_TouchpadPassthrough.IsOn);
     }
 }

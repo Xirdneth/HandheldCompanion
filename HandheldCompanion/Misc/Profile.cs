@@ -35,7 +35,7 @@ public enum UpdateSource
 public partial class Profile : ICloneable, IComparable
 {
     [JsonIgnore] public const int SensivityArraySize = 49; // x + 1 (hidden)
-
+    private readonly Lazy<IProfileManager> profileManager;
     public ProfileErrorCode ErrorCode = ProfileErrorCode.None;
 
     public string Name { get; set; } = string.Empty;
@@ -53,7 +53,7 @@ public partial class Profile : ICloneable, IComparable
 
     public string LayoutTitle { get; set; } = string.Empty;
     public bool LayoutEnabled { get; set; } = false;
-    public Layout Layout { get; set; } = new();
+    public Layout Layout { get; set; }
 
     public bool Whitelisted { get; set; } // if true, can see through the HidHide cloak
 
@@ -106,6 +106,20 @@ public partial class Profile : ICloneable, IComparable
     // emulated controller type, default is default
     public HIDmode HID { get; set; } = HIDmode.NotSelected;
 
+    public Profile(Lazy<IProfileManager> profileManager)
+    {
+        // initialize aiming array
+        if (MotionSensivityArray.Count == 0)
+            for (var i = 0; i < SensivityArraySize; i++)
+            {
+                var value = i / (double)(SensivityArraySize - 1);
+                MotionSensivityArray[value] = 0.5f;
+            }
+
+        this.profileManager = profileManager;
+        //Layout = new(controllerManager,timerManager);
+    }
+
     public Profile()
     {
         // initialize aiming array
@@ -117,7 +131,7 @@ public partial class Profile : ICloneable, IComparable
             }
     }
 
-    public Profile(string path) : this()
+    public Profile(string path, Lazy<IProfileManager> profileManager) : this(profileManager)
     {
         if (!string.IsNullOrEmpty(path))
         {
@@ -180,7 +194,7 @@ public partial class Profile : ICloneable, IComparable
         // if sub profile, return the following (mainprofile.name - subprofile.name)
         if (IsSubProfile)
         {
-            string mainProfileName = ProfileManager.GetProfileForSubProfile(this).Name;
+            string mainProfileName = profileManager.Value.GetProfileForSubProfile(this).Name;
             return $"{mainProfileName} - {Name}";
         }
         else

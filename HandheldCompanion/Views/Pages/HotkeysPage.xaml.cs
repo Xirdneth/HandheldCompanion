@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using Page = System.Windows.Controls.Page;
@@ -12,15 +13,17 @@ namespace HandheldCompanion.Views.Pages;
 /// </summary>
 public partial class HotkeysPage : Page
 {
-    public HotkeysPage()
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+
+    public HotkeysPage(Lazy<IHotkeysManager> hotkeysManager)
     {
         InitializeComponent();
-
-        HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
-        HotkeysManager.HotkeyTypeCreated += HotkeysManager_HotkeyTypeCreated;
+        this.hotkeysManager = hotkeysManager;
+        hotkeysManager.Value.HotkeyCreated += HotkeysManager_HotkeyCreated;
+        hotkeysManager.Value.HotkeyTypeCreated += HotkeysManager_HotkeyTypeCreated;
     }
 
-    public HotkeysPage(string Tag) : this()
+    public HotkeysPage(string Tag, Lazy<IHotkeysManager> hotkeysManager) : this(hotkeysManager)
     {
         this.Tag = Tag;
     }

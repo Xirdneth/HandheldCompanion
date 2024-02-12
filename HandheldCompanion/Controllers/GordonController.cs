@@ -19,8 +19,13 @@ namespace HandheldCompanion.Controllers
 
         private const short TrackPadInner = short.MaxValue / 2;
         public const ushort MaxRumbleIntensity = 2048;
+        private readonly Lazy<ISettingsManager> settingsManager;
+        private readonly Lazy<ITimerManager> timerManager;
 
-        public GordonController(PnPDetails details) : base()
+        public GordonController(PnPDetails details, 
+            Lazy<ISettingsManager> settingsManager,
+            Lazy<IControllerManager> controllerManager,
+            Lazy<ITimerManager> timerManager) : base(settingsManager,controllerManager)
         {
             AttachDetails(details);
 
@@ -58,6 +63,8 @@ namespace HandheldCompanion.Controllers
             SourceButtons.Remove(ButtonFlags.RightStickRight);
 
             SourceAxis.Remove(AxisLayoutFlags.RightStick);
+            this.settingsManager = settingsManager;
+            this.timerManager = timerManager;
         }
 
         public override void AttachDetails(PnPDetails details)
@@ -233,9 +240,9 @@ namespace HandheldCompanion.Controllers
             Controller.SetGyroscope(true);
             Controller.SetIdleTimeout(300);  // ~5 min
 
-            SetVirtualMuted(SettingsManager.GetBoolean("SteamControllerMute"));
+            SetVirtualMuted(settingsManager.Value.GetBoolean("SteamControllerMute"));
 
-            TimerManager.Tick += UpdateInputs;
+            timerManager.Value.Tick += UpdateInputs;
 
             base.Plug();
         }
@@ -258,7 +265,7 @@ namespace HandheldCompanion.Controllers
                 return;
             }
 
-            TimerManager.Tick -= UpdateInputs;
+            timerManager.Value.Tick -= UpdateInputs;
             base.Unplug();
         }
 

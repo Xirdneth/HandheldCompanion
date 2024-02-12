@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Managers;
 using HandheldCompanion.Platforms;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -8,10 +9,13 @@ namespace HandheldCompanion.Controls.Hints
 {
     public class Hint_SteamNeptuneDesktop : IHint
     {
+        private readonly Lazy<IPlatformManager> platformManager;
+
         public Hint_SteamNeptuneDesktop() : base()
         {
-            PlatformManager.Steam.Updated += Steam_Updated;
-            PlatformManager.Initialized += PlatformManager_Initialized;
+            this.platformManager = App.ServiceProvider.GetRequiredService<Lazy<IPlatformManager>>();
+            platformManager.Value.Steam.Updated += Steam_Updated;
+            platformManager.Value.Initialized += PlatformManager_Initialized;
 
             // default state
             this.HintActionButton.Visibility = Visibility.Visible;
@@ -21,11 +25,12 @@ namespace HandheldCompanion.Controls.Hints
             this.HintReadMe.Text = Properties.Resources.Hint_SteamNeptuneReadme;
 
             this.HintActionButton.Content = Properties.Resources.Hint_SteamNeptuneAction;
+            
         }
 
         private void Steam_Updated(PlatformStatus status)
         {
-            bool DesktopProfileApplied = PlatformManager.Steam.HasDesktopProfileApplied();
+            bool DesktopProfileApplied = platformManager.Value.Steam.HasDesktopProfileApplied();
 
             // UI thread (async)
             Application.Current.Dispatcher.BeginInvoke(() =>
@@ -46,19 +51,19 @@ namespace HandheldCompanion.Controls.Hints
 
         private void PlatformManager_Initialized()
         {
-            Steam_Updated(PlatformManager.Steam.Status);
+            Steam_Updated(platformManager.Value.Steam.Status);
         }
 
         protected override void HintActionButton_Click(object sender, RoutedEventArgs e)
         {
             Task.Run(async () =>
             {
-                PlatformManager.Steam.StopProcess();
+                platformManager.Value.Steam.StopProcess();
 
-                while (PlatformManager.Steam.IsRunning)
+                while (platformManager.Value.Steam.IsRunning)
                     await Task.Delay(1000);
 
-                PlatformManager.Steam.StartProcess();
+                platformManager.Value.Steam.StartProcess();
             });
         }
 

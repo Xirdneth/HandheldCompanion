@@ -9,25 +9,27 @@ using System.Windows.Media;
 
 namespace HandheldCompanion.Managers;
 
-public static class SettingsManager
+public class SettingsManager : ISettingsManager
 {
     public delegate void InitializedEventHandler();
 
     public delegate void SettingValueChangedEventHandler(string name, object value);
 
-    private static readonly Dictionary<string, object> Settings = new();
+    private readonly Dictionary<string, object> Settings = new();
+    private readonly Lazy<IMultimediaManager> multimediaManager;
 
-    static SettingsManager()
+    public SettingsManager(Lazy<IMultimediaManager> multimediaManager)
     {
+        this.multimediaManager = multimediaManager;
     }
 
-    public static bool IsInitialized { get; internal set; }
+    public bool IsInitialized { get; internal set; }
 
-    public static event SettingValueChangedEventHandler SettingValueChanged;
+    public event SettingValueChangedEventHandler SettingValueChanged;
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
-    public static void Start()
+    public void Start()
     {
         var properties = Properties.Settings
             .Default
@@ -47,7 +49,7 @@ public static class SettingsManager
         LogManager.LogInformation("{0} has started", "SettingsManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
@@ -57,7 +59,7 @@ public static class SettingsManager
         LogManager.LogInformation("{0} has stopped", "SettingsManager");
     }
 
-    public static void SetProperty(string name, object value, bool force = false, bool temporary = false)
+    public void SetProperty(string name, object value, bool force = false, bool temporary = false)
     {
         var prevValue = GetProperty(name, temporary);
 
@@ -107,12 +109,12 @@ public static class SettingsManager
         }
     }
 
-    private static bool PropertyExists(string name)
+    private bool PropertyExists(string name)
     {
         return Properties.Settings.Default.Properties.Cast<SettingsProperty>().Any(prop => prop.Name == name);
     }
 
-    public static SortedDictionary<string, object> GetProperties()
+    public SortedDictionary<string, object> GetProperties()
     {
         SortedDictionary<string, object> result = new();
 
@@ -122,7 +124,7 @@ public static class SettingsManager
         return result;
     }
 
-    private static object GetProperty(string name, bool temporary = false)
+    private object GetProperty(string name, bool temporary = false)
     {
         // used to handle cases
         switch (name)
@@ -176,10 +178,10 @@ public static class SettingsManager
                 }
 
             case "HasBrightnessSupport":
-                return MultimediaManager.HasBrightnessSupport();
+                return multimediaManager.Value.HasBrightnessSupport();
 
             case "HasVolumeSupport":
-                return MultimediaManager.HasVolumeSupport();
+                return multimediaManager.Value.HasVolumeSupport();
 
             default:
                 {
@@ -193,17 +195,17 @@ public static class SettingsManager
         }
     }
 
-    public static string GetString(string name, bool temporary = false)
+    public string GetString(string name, bool temporary = false)
     {
         return Convert.ToString(GetProperty(name, temporary));
     }
 
-    public static bool GetBoolean(string name, bool temporary = false)
+    public bool GetBoolean(string name, bool temporary = false)
     {
         return Convert.ToBoolean(GetProperty(name, temporary));
     }
 
-    public static Color GetColor(string name, bool temporary = false)
+    public Color GetColor(string name, bool temporary = false)
     {
         // Conver color, which is stored as a HEX string to a color datatype
         string hexColor = Convert.ToString(GetProperty(name, temporary));
@@ -223,27 +225,27 @@ public static class SettingsManager
         return color;
     }
 
-    public static int GetInt(string name, bool temporary = false)
+    public int GetInt(string name, bool temporary = false)
     {
         return Convert.ToInt32(GetProperty(name, temporary));
     }
 
-    public static uint GetUInt(string name, bool temporary = false)
+    public uint GetUInt(string name, bool temporary = false)
     {
         return Convert.ToUInt32(GetProperty(name, temporary));
     }
 
-    public static DateTime GetDateTime(string name, bool temporary = false)
+    public DateTime GetDateTime(string name, bool temporary = false)
     {
         return Convert.ToDateTime(GetProperty(name, temporary));
     }
 
-    public static double GetDouble(string name, bool temporary = false)
+    public double GetDouble(string name, bool temporary = false)
     {
         return Convert.ToDouble(GetProperty(name, temporary));
     }
 
-    public static StringCollection GetStringCollection(string name, bool temporary = false)
+    public StringCollection GetStringCollection(string name, bool temporary = false)
     {
         return (StringCollection)GetProperty(name, temporary);
     }

@@ -1,6 +1,8 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -13,15 +15,18 @@ public partial class DpadPage : ILayoutPage
 {
     public static List<ButtonFlags> DPAD = new()
         { ButtonFlags.DPadUp, ButtonFlags.DPadDown, ButtonFlags.DPadLeft, ButtonFlags.DPadRight };
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<ITimerManager> timerManager;
 
-    public DpadPage()
+    public DpadPage(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
-
+        this.controllerManager = controllerManager;
+        this.timerManager = timerManager;
         // draw UI
         foreach (ButtonFlags button in DPAD)
         {
-            ButtonStack panel = new(button);
+            ButtonStack panel = new(button, controllerManager, timerManager);
             DpadStackPanel.Children.Add(panel);
 
             ButtonStacks.Add(button, panel);
@@ -39,7 +44,8 @@ public partial class DpadPage : ILayoutPage
         enabled = dpad;
     }
 
-    public DpadPage(string Tag) : this()
+    public DpadPage(string Tag,
+        Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         this.Tag = Tag;
     }

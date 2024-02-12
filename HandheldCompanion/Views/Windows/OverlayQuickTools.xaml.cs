@@ -1,5 +1,7 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Controls;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.QuickPages;
@@ -70,7 +72,21 @@ public partial class OverlayQuickTools : GamepadWindow
     private bool AutoHide;
     private bool isClosing;
     private readonly DispatcherTimer clockUpdateTimer;
-
+    private readonly Lazy<ISettingsManager> settingsManager;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
+    private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IPlatformManager> platformManager;
+    private readonly Lazy<IPowerProfileManager> powerProfileManager;
+    private readonly Lazy<IGPUManager> gPUManager;
+    private readonly Lazy<IPerformanceManager> performanceManager;
+    private readonly Lazy<IControllerManager> controllerManager;
+    private readonly Lazy<IUISounds> uISounds;
+    private readonly Lazy<ISystemManager> systemManager;
+    private readonly Lazy<IInputsManager> inputsManager;
+    private readonly Lazy<IProcessManager> processManager;
+    private readonly Lazy<ILayoutTemplate> layoutTemplate;
+    private readonly Lazy<ITimerManager> timerManager;
     public QuickHomePage homePage;
     public QuickDevicePage devicePage;
     public QuickPerformancePage performancePage;
@@ -81,9 +97,37 @@ public partial class OverlayQuickTools : GamepadWindow
     private static OverlayQuickTools CurrentWindow;
     private string preNavItemTag;
 
-    public OverlayQuickTools()
+    public OverlayQuickTools(
+        Lazy<ISettingsManager> settingsManager, 
+        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IProfileManager> profileManager,
+        Lazy<IPlatformManager> platformManager,
+        Lazy<IPowerProfileManager> powerProfileManager,
+        Lazy<IGPUManager> gPUManager,
+        Lazy<IPerformanceManager> performanceManager,
+        Lazy<IControllerManager> controllerManager,
+        Lazy<IUISounds> uISounds,
+        Lazy<ISystemManager> systemManager,
+        Lazy<IInputsManager> inputsManager,
+        Lazy<IProcessManager> processManager,
+        Lazy<ITimerManager> timerManager)
     {
         InitializeComponent();
+        this.settingsManager = settingsManager;
+        this.hotkeysManager = hotkeysManager;
+        this.multimediaManager = multimediaManager;
+        this.profileManager = profileManager;
+        this.platformManager = platformManager;
+        this.powerProfileManager = powerProfileManager;
+        this.gPUManager = gPUManager;
+        this.performanceManager = performanceManager;
+        this.controllerManager = controllerManager;
+        this.uISounds = uISounds;
+        this.systemManager = systemManager;
+        this.inputsManager = inputsManager;
+        this.processManager = processManager;
+        this.timerManager = timerManager;
         CurrentWindow = this;
 
         // used by gamepad navigation
@@ -98,19 +142,13 @@ public partial class OverlayQuickTools : GamepadWindow
         WM_PAINT_TIMER = new(250) { AutoReset = false };
         WM_PAINT_TIMER.Elapsed += WM_PAINT_TIMER_Tick;
 
-        // create manager(s)
-        SystemManager.PowerStatusChanged += PowerManager_PowerStatusChanged;
-
-        MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
-
         // create pages
-        homePage = new("quickhome");
-        devicePage = new("quickdevice");
-        performancePage = new("quickperformance");
-        profilesPage = new("quickprofiles");
-        overlayPage = new("quickoverlay");
-        suspenderPage = new("quicksuspender");
+        homePage = new("quickhome",settingsManager,hotkeysManager,multimediaManager,profileManager);
+        devicePage = new("quickdevice",settingsManager,profileManager,multimediaManager);
+        performancePage = new("quickperformance",settingsManager,platformManager,performanceManager,powerProfileManager,multimediaManager);
+        profilesPage = new("quickprofiles",profileManager,powerProfileManager,platformManager,gPUManager,performanceManager,multimediaManager,hotkeysManager,inputsManager,processManager,controllerManager,timerManager);
+        overlayPage = new("quickoverlay",settingsManager,platformManager);
+        suspenderPage = new("quicksuspender",processManager);
 
         _pages.Add("QuickHomePage", homePage);
         _pages.Add("QuickDevicePage", devicePage);
@@ -149,7 +187,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void SystemManager_DisplaySettingsChanged(ScreenResolution resolution)
     {
-        int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
+        int QuickToolsLocation = settingsManager.Value.GetInt("QuickToolsLocation");
         UpdateLocation(QuickToolsLocation);
     }
 
@@ -217,7 +255,7 @@ public partial class OverlayQuickTools : GamepadWindow
             // set key
             var Key = $"Battery{KeyStatus}{KeyValue}";
 
-            if (SystemManager.PowerStatusIcon.TryGetValue(Key, out var glyph))
+            if (systemManager.Value.PowerStatusIcon.TryGetValue(Key, out var glyph))
                 BatteryIndicatorIcon.Glyph = glyph;
 
             if (status.BatteryLifeRemaining > 0)
@@ -243,8 +281,13 @@ public partial class OverlayQuickTools : GamepadWindow
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        // create manager(s)
+        systemManager.Value.PowerStatusChanged += PowerManager_PowerStatusChanged;
+
+        multimediaManager.Value.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
         // load gamepad navigation maanger
-        gamepadFocusManager = new(this, ContentFrame);
+        gamepadFocusManager = new(this, ContentFrame,settingsManager,controllerManager,uISounds,inputsManager);
 
         hwndSource = PresentationSource.FromVisual(this) as HwndSource;
         hwndSource.AddHook(WndProc);
@@ -428,7 +471,7 @@ public partial class OverlayQuickTools : GamepadWindow
                 case "shortcutDesktop":
                 case "shortcutESC":
                 case "shortcutExpand":
-                    HotkeysManager.TriggerRaised(navItemTag, null, 0, false, true);
+                    hotkeysManager.Value.TriggerRaised(navItemTag, null, 0, false, true);
                     break;
             }
 

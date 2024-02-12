@@ -28,9 +28,11 @@ public class Steam : IPlatform
         { @"controller_base\chord_neptune.vdf", Resources.chord_neptune },
         { @"controller_base\templates\controller_neptune_steamcontroller.vdf", Resources.empty_neptune },
     };
+    private readonly Lazy<IProcessManager> processManager;
 
-    public Steam()
+    public Steam(Lazy<IProcessManager> processManager)
     {
+        this.processManager = processManager;
         PlatformType = PlatformType.Steam;
 
         Name = "Steam";
@@ -61,6 +63,7 @@ public class Steam : IPlatform
         }
 
         IsControllerDriverInstalled = HasXboxDriversInstalled();
+
     }
 
     public override bool Start()
@@ -69,14 +72,14 @@ public class Steam : IPlatform
         if (IsRunning)
             Process.Exited += Process_Exited;
 
-        ProcessManager.ProcessStarted += ProcessManager_ProcessStarted;
+        processManager.Value.ProcessStarted += ProcessManager_ProcessStarted;
 
         return base.Start();
     }
 
     public override bool Stop(bool kill = false)
     {
-        ProcessManager.ProcessStarted -= ProcessManager_ProcessStarted;
+        processManager.Value.ProcessStarted -= ProcessManager_ProcessStarted;
 
         // restore files even if Steam is still running
         RestoreFiles();

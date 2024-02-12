@@ -17,7 +17,7 @@ public class OverlayWindow : Window
     private const int WM_MOUSEACTIVATE = 0x0021;
     private const int MA_NOACTIVATE = 0x0003;
 
-    public OverlayWindow()
+    public OverlayWindow(Lazy<IHotkeysManager> hotkeysManager)
     {
         // overlay specific settings
         WindowStyle = WindowStyle.None;
@@ -34,6 +34,7 @@ public class OverlayWindow : Window
 
         Loaded += OverlayWindow_Loaded;
         IsVisibleChanged += OverlayWindow_IsVisibleChanged;
+        this.hotkeysManager = hotkeysManager;
     }
 
     private void OverlayWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -41,7 +42,7 @@ public class OverlayWindow : Window
         if (_hotkeyId == 0)
             return;
 
-        if (HotkeysManager.Hotkeys.TryGetValue(_hotkeyId, out Hotkey hotkey))
+        if (hotkeysManager.Value.Hotkeys.TryGetValue(_hotkeyId, out Hotkey hotkey))
             hotkey.SetToggle(this.Visibility == Visibility.Visible ? true : false);
     }
 
@@ -156,6 +157,7 @@ public class OverlayWindow : Window
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_NOACTIVATE = 0x08000000;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
 
     [DllImport("user32.dll")]
     public static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);

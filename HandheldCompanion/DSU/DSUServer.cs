@@ -89,12 +89,13 @@ public class DSUServer
 
     private readonly GetPadDetail portInfoGet;
     private readonly byte[] recvBuffer = new byte[1024];
+    private readonly Lazy<ITimerManager> timerManager;
     public bool running;
     private uint serverId;
     private int udpPacketCount;
     private Socket udpSock;
 
-    public DSUServer()
+    public DSUServer(Lazy<ITimerManager> timerManager)
     {
         PadMacAddress = new PhysicalAddress(new byte[] { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10 });
         portInfoGet = GetPadDetailForIdx;
@@ -117,6 +118,7 @@ public class DSUServer
             Model = DsModel.DS4,
             PadState = DsState.Connected
         };
+        this.timerManager = timerManager;
     }
 
     private void GetPadDetailForIdx(int padIdx, ref DualShockPadMeta meta)
@@ -444,7 +446,7 @@ public class DSUServer
         new Random().NextBytes(randomBuf);
         serverId = BitConverter.ToUInt32(randomBuf, 0);
 
-        TimerManager.Tick += Tick;
+        timerManager.Value.Tick += Tick;
 
         running = true;
 
@@ -470,7 +472,7 @@ public class DSUServer
 
         running = false;
 
-        TimerManager.Tick -= Tick;
+        timerManager.Value.Tick -= Tick;
 
         LogManager.LogInformation("{0} has stopped", ToString());
         Stopped?.Invoke(this);
@@ -558,7 +560,7 @@ public class DSUServer
             }
 
             //motion timestamp
-            Array.Copy(BitConverter.GetBytes((ulong)TimerManager.GetElapsedSeconds()), 0, outputData, outIdx, 8);
+            Array.Copy(BitConverter.GetBytes((ulong)timerManager.Value.GetElapsedSeconds()), 0, outputData, outIdx, 8);
 
             outIdx += 8;
 

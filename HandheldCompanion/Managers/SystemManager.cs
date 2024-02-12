@@ -7,7 +7,7 @@ using SystemPowerManager = Windows.System.Power.PowerManager;
 
 namespace HandheldCompanion.Managers;
 
-public static class SystemManager
+public class SystemManager : ISystemManager
 {
     public enum SystemStatus
     {
@@ -16,15 +16,15 @@ public static class SystemManager
         SystemReady = 2
     }
 
-    private static bool IsPowerSuspended;
-    private static bool IsSessionLocked = true;
+    private bool IsPowerSuspended;
+    private bool IsSessionLocked = true;
 
-    private static SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
-    private static SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
+    private SystemStatus currentSystemStatus = SystemStatus.SystemBooting;
+    private SystemStatus previousSystemStatus = SystemStatus.SystemBooting;
 
-    public static bool IsInitialized;
+    public bool IsInitialized { get; set; }
 
-    public static readonly SortedDictionary<string, string> PowerStatusIcon = new()
+    public SortedDictionary<string, string> PowerStatusIcon { get; set; } = new()
     {
         { "Battery0", "\uE850" },
         { "Battery1", "\uE851" },
@@ -63,7 +63,7 @@ public static class SystemManager
         { "BatterySaver10", "\uEA95" }
     };
 
-    static SystemManager()
+    public SystemManager()
     {
         // listen to system events
         SystemEvents.PowerModeChanged += OnPowerChange;
@@ -83,12 +83,12 @@ public static class SystemManager
 
     #endregion
 
-    private static void BatteryStatusChanged(object sender, object e)
+    private void BatteryStatusChanged(object sender, object e)
     {
         PowerStatusChanged?.Invoke(SystemInformation.PowerStatus);
     }
 
-    public static void Start()
+    public void Start()
     {
         // check if current session is locked
         var handle = OpenInputDesktop(0, false, 0);
@@ -104,7 +104,7 @@ public static class SystemManager
         LogManager.LogInformation("{0} has started", "PowerManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
@@ -118,7 +118,7 @@ public static class SystemManager
         LogManager.LogInformation("{0} has stopped", "PowerManager");
     }
 
-    private static void OnPowerChange(object s, PowerModeChangedEventArgs e)
+    private void OnPowerChange(object s, PowerModeChangedEventArgs e)
     {
         switch (e.Mode)
         {
@@ -139,7 +139,7 @@ public static class SystemManager
         SystemRoutine();
     }
 
-    private static void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
     {
         switch (e.Reason)
         {
@@ -158,7 +158,7 @@ public static class SystemManager
         SystemRoutine();
     }
 
-    private static void SystemRoutine()
+    private void SystemRoutine()
     {
         if (!IsPowerSuspended && !IsSessionLocked)
             currentSystemStatus = SystemStatus.SystemReady;
@@ -177,15 +177,15 @@ public static class SystemManager
 
     #region events
 
-    public static event SystemStatusChangedEventHandler SystemStatusChanged;
+    public event SystemStatusChangedEventHandler SystemStatusChanged;
 
     public delegate void SystemStatusChangedEventHandler(SystemStatus status, SystemStatus prevStatus);
 
-    public static event PowerStatusChangedEventHandler PowerStatusChanged;
+    public event PowerStatusChangedEventHandler PowerStatusChanged;
 
     public delegate void PowerStatusChangedEventHandler(PowerStatus status);
 
-    public static event InitializedEventHandler Initialized;
+    public event InitializedEventHandler Initialized;
 
     public delegate void InitializedEventHandler();
 

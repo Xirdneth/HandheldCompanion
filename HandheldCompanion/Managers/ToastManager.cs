@@ -6,21 +6,21 @@ using Timer = System.Timers.Timer;
 
 namespace HandheldCompanion.Managers;
 
-public static class ToastManager
+public class ToastManager : IToastManager
 {
     private const int m_Interval = 5000;
     private const string m_Group = "HandheldCompanion";
 
-    private static readonly ConcurrentDictionary<string, Timer> m_Threads = new();
+    private readonly ConcurrentDictionary<string, Timer> m_Threads = new();
 
-    public static bool IsEnabled;
-    private static bool IsInitialized;
+    public bool IsEnabled { get; set; }
+    public bool IsInitialized { get; set; }
 
-    static ToastManager()
+    public ToastManager()
     {
     }
 
-    public static void SendToast(string title, string content = "", string img = "Toast")
+    public void SendToast(string title, string content = "", string img = "Toast")
     {
         if (!IsEnabled)
             return;
@@ -75,14 +75,14 @@ public static class ToastManager
         ToastThread.Start();
     }
 
-    public static void Start()
+    public void Start()
     {
         IsInitialized = true;
 
         LogManager.LogInformation("{0} has started", "ToastManager");
     }
 
-    public static void Stop()
+    public void Stop()
     {
         if (!IsInitialized)
             return;
