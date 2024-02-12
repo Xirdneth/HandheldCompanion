@@ -1,6 +1,9 @@
 ﻿using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers;
 using HandheldCompanion.Utils;
+using HidLibrary;
 using iNKORE.UI.WPF.Modern.Controls;
+using System;
 using System.Collections.Generic;
 using System.Windows.Media;
 
@@ -9,6 +12,9 @@ namespace HandheldCompanion.Devices
     public interface IIDevice
     {
         Layout DefaultLayout { get; set; }
+        Dictionary<byte, HidDevice> hidDevices { get; }
+
+        string ProductIllustration { get; set; }
         bool IsOpen { get; }
         bool IsSupported { get; }
         IEnumerable<ButtonFlags> OEMButtons { get; }

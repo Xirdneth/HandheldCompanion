@@ -70,7 +70,7 @@ public class IDevice : IIDevice
     private static IDevice device;
 
     protected ushort _vid, _pid;
-    public Dictionary<byte, HidDevice> hidDevices = new();
+    public Dictionary<byte, HidDevice> hidDevices { get; set; } = new();
 
     public Vector3 AccelerometerAxis = new(1.0f, 1.0f, 1.0f);
 
@@ -142,17 +142,15 @@ public class IDevice : IIDevice
     // UI
     protected FontFamily GlyphFontFamily = new("PromptFont");
     protected const string defaultGlyph = "\u2753";
-    private readonly Lazy<ISettingsManager> settingsManager;
-    private readonly Lazy<IPowerProfileManager> powerProfileManager;
-    private readonly Lazy<IControllerManager> controllerManager;
-    private readonly Lazy<ISystemManager> systemManager;
-    private readonly Lazy<ITimerManager> timerManager;
+    private readonly Lazy<ILegionGo> legionGo;
+    public Lazy<ISettingsManager> settingsManager;
+  
     public ECDetails ECDetails;
 
     public string ExternalSensorName = string.Empty;
     public string InternalSensorName = string.Empty;
 
-    public string ProductIllustration = "device_generic";
+    public string ProductIllustration { get; set; } = "device_generic";
     public string ProductModel = "default";
 
     // minimum delay before trying to emulate a virtual controller on system resume (milliseconds)
@@ -165,25 +163,24 @@ public class IDevice : IIDevice
 
     public IDevice(
         Lazy<ISettingsManager> settingsManager,
-        Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<ISystemManager> systemManager,
-        Lazy<ITimerManager> timerManager
+        Lazy<ILegionGo> legionGo
         )
     {
+        this.legionGo = legionGo;
         this.settingsManager = settingsManager;
-        this.powerProfileManager = powerProfileManager;
-        this.controllerManager = controllerManager;
-        this.systemManager = systemManager;
-        this.timerManager = timerManager;
-        DefaultLayout = new(controllerManager.Value,timerManager.Value);
+        DefaultLayout = new();
+    }
+
+    public IDevice()
+    {
+        DefaultLayout = new();
     }
 
     public IEnumerable<ButtonFlags> OEMButtons => OEMChords.SelectMany(a => a.state.Buttons).Distinct();
 
-    public virtual bool IsOpen => openLibSys is not null;
+    public virtual bool IsOpen { get { return openLibSys is not null; } }
 
-    public virtual bool IsSupported => true;
+    public virtual bool IsSupported { get { return true; } }
 
     public Layout DefaultLayout { get; set; }
 
@@ -214,12 +211,247 @@ public class IDevice : IIDevice
 
         switch (ManufacturerName)
         {
+            case "AYN":
+                {
+                    switch (ProductName)
+                    {
+                        case "Loki MiniPro":
+                            device = new LokiMiniPro();
+                            break;
+                        case "Loki Zero":
+                            device = new LokiZero();
+                            break;
+                        case "Loki Max":
+                            switch (Processor)
+                            {
+                                case "AMD Ryzen 5 6600U with Radeon Graphics":
+                                    device = new LokiMax6600U();
+                                    break;
+                                case "AMD Ryzen 7 6800U with Radeon Graphics":
+                                    device = new LokiMax6800U();
+                                    break;
+                            }
+                            break;
+                    }
+                }
+                break;
+
+            case "AOKZOE":
+                {
+                    switch (ProductName)
+                    {
+                        case "AOKZOE A1 AR07":
+                            device = new AOKZOEA1();
+                            break;
+                        case "AOKZOE A1 Pro":
+                            device = new AOKZOEA1Pro();
+                            break;
+                    }
+                }
+                break;
+
+            case "AYADEVICE":
+            case "AYANEO":
+                {
+                    switch (ProductName)
+                    {
+                        case "AIR":
+                            device = new AYANEOAIR();
+                            break;
+                        case "AIR Pro":
+                            device = new AYANEOAIRPro();
+                            break;
+                        case "AIR 1S":
+                            device = new AYANEOAIR1S();
+                            break;
+                        case "AIR Lite":
+                            device = new AYANEOAIRLite();
+                            break;
+                        case "AYA NEO FOUNDER":
+                        case "AYANEO 2021":
+                            device = new AYANEO2021();
+                            break;
+                        case "AYANEO 2021 Pro":
+                        case "AYANEO 2021 Pro Retro Power":
+                            device = new AYANEO2021Pro();
+                            break;
+                        case "KUN":
+                            device = new AYANEOKUN();
+                            break;
+                        case "NEXT Pro":
+                        case "NEXT Advance":
+                        case "NEXT":
+                            device = new AYANEONEXT();
+                            break;
+                        case "AYANEO 2":
+                        case "GEEK":
+                            device = new AYANEO2();
+                            break;
+                        case "AB05-AMD":
+                            device = new AYANEOAIRPlusAMD();
+                            break;
+                        case "AB05-Mendocino":
+                            device = new AYANEOAIRPlusAMDMendocino();
+                            break;
+                        case "AB05-Intel":
+                            device = new AYANEOAIRPlusIntel();
+                            break;
+                        case "AYANEO 2S":
+                        case "GEEK 1S":
+                            device = new AYANEO2S();
+                            break;
+                    }
+                }
+                break;
+
+            case "CNCDAN":
+                {
+                    switch (ProductName)
+                    {
+                        case "NucDeckRev1.0":
+                            device = new NUCDeck();
+                            break;
+                    }
+                }
+                break;
+
+            case "GPD":
+                {
+                    switch (ProductName)
+                    {
+                        case "WIN2":
+                            device = new GPDWin2();
+                            break;
+                        case "G1617-01":
+                            switch (Processor)
+                            {
+                                case "AMD Ryzen 5 7640U w/ Radeon 760M Graphics":
+                                    device = new GPDWinMini_7640U();
+                                    break;
+                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
+                                    device = new GPDWinMini_7840U();
+                                    break;
+                            }
+                            break;
+                        case "G1618-03":
+                            device = new GPDWin3();
+                            break;
+                        case "G1618-04":
+                            switch (Processor)
+                            {
+                                case "AMD Ryzen 7 6800U with Radeon Graphics":
+                                    device = new GPDWin4();
+                                    break;
+                                case "AMD Ryzen 5 7640U w/ Radeon 760M Graphics":
+                                    device = new GPDWin4_2023_7640U();
+                                    break;
+                                case "AMD Ryzen 7 7840U w/ Radeon 780M Graphics":
+                                    device = new GPDWin4_2023_7840U();
+                                    break;
+                            }
+                            break;
+                        case "G1619-03":
+                            device = new GPDWinMax2Intel();
+                            break;
+                        case "G1619-04":
+                            device = new GPDWinMax2AMD();
+                            break;
+                    }
+                }
+                break;
+
+            case "ONE-NETBOOK TECHNOLOGY CO., LTD.":
+            case "ONE-NETBOOK":
+                {
+                    switch (ProductName)
+                    {
+                        case "ONEXPLAYER F1":
+                            {
+                                switch (Version)
+                                {
+                                    default:
+                                    case "Default string":
+                                        device = new OneXPlayerOneXFly();
+                                        break;
+                                }
+                                break;
+                            }
+                        case "ONE XPLAYER":
+                        case "ONEXPLAYER Mini Pro":
+                            {
+                                switch (Version)
+                                {
+                                    default:
+                                    case "V01":
+                                        device = new OneXPlayerMiniAMD();
+                                        break;
+                                    case "1002-C":
+                                        device = new OneXPlayerMiniIntel();
+                                        break;
+                                    case "V03":
+                                        device = new OneXPlayerMiniPro();
+                                        break;
+                                }
+                                break;
+                            }
+                        case "ONEXPLAYER mini A07":
+                            device = new OneXPlayerMiniAMD();
+                            break;
+                        case "ONEXPLAYER 2 ARP23":
+                            {
+                                switch (Version)
+                                {
+                                    default:
+                                    case "Ver.1.0":
+                                        device = new OneXPlayer2();
+                                        break;
+                                }
+                                break;
+                            }
+                        case "ONEXPLAYER 2 PRO ARP23P":
+                        case "ONEXPLAYER 2 PRO ARP23P EVA-01":
+                            switch (Version)
+                            {
+                                default:
+                                case "Version 1.0":
+                                    device = new OneXPlayer2Pro();
+                                    break;
+                            }
+                            break;
+                    }
+                }
+                break;
+
+            case "ASUSTEK COMPUTER INC.":
+                {
+                    switch (ProductName)
+                    {
+                        // Todo, figure out if theres a diff between Z1 and Z1 extreme versions
+                        case "RC71L":
+                            device = new ROGAlly();
+                            break;
+                    }
+                }
+                break;
+
+            case "VALVE":
+                {
+                    switch (ProductName)
+                    {
+                        case "Jupiter":
+                        case "Galileo":
+                            device = new SteamDeck();
+                            break;
+                    }
+                }
+                break;
+
             case "LENOVO":
                 {
                     switch (ProductName)
                     {
                         case "LNVNB161216":
-                            device = new LegionGo(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager);
+                            device = (IDevice?)legionGo.Value;
                             break;
                     }
                 }
@@ -230,7 +462,7 @@ public class IDevice : IIDevice
 
         if (device is null)
         {
-            device = new DefaultDevice(settingsManager, powerProfileManager, controllerManager, systemManager, timerManager);
+            device = new DefaultDevice();
             LogManager.LogWarning("Device not yet supported. The behavior of the application will be unpredictable");
         }
 

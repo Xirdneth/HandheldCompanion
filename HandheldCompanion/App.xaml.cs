@@ -90,7 +90,8 @@ public partial class App : Application
                 services.AddLazySingleton<IXInputPlus, XInputPlus>();
                 services.AddLazySingleton<IUISounds, UISounds>();
                 services.AddLazySingleton<IPowerProfile, PowerProfile>();
-                services.AddLazyTransient<IIDevice, IDevice>();
+                services.AddLazySingleton<IIDevice, IDevice>();
+                services.AddLazySingleton<ILegionGo, LegionGo>();
                 //services.AddLazySingleton<IIActions, IActions>();
                 services.AddLazySingleton<IXInputController, XInputController>();
                 services.AddLazySingleton<IVangoghGPU, VangoghGPU>();

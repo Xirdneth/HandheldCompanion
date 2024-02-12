@@ -254,6 +254,7 @@ public partial class MainWindow : GamepadWindow
         // initialize title
         Title += $" ({fileVersionInfo.FileVersion})";
 
+        //iDevice.Value.Initialize(settingsManager,powerProfileManager,controllerManager,systemManager,timerManager);
         // initialize device
         CurrentDevice = iDevice.Value.GetDefault();
         CurrentDevice.PullSensors();
