@@ -302,12 +302,12 @@ public partial class MainWindow : GamepadWindow
         }
 
         // initialize UI sounds board
-        //UISounds uiSounds = new UISounds();
+        var Sounds = uISounds.Value;
 
         // load window(s)
         loadWindows();
 
-        // load page(s)
+        //// load page(s)
         loadPages();
 
         // manage events
