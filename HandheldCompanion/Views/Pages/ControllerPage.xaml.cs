@@ -14,7 +14,7 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for Devices.xaml
 /// </summary>
-public partial class ControllerPage : Page
+public partial class ControllerPage : Page, IControllerPage
 {
     // controllers vars
     private HIDmode controllerMode = HIDmode.NoController;
@@ -26,6 +26,8 @@ public partial class ControllerPage : Page
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<ILayoutTemplate> layoutTemplate;
     private readonly Lazy<ITimerManager> timerManager;
+    private readonly IILayoutPage layoutPage;
+    public event RoutedEventHandler ControllerPageLoaded;
 
     public ControllerPage(
         Lazy<ISettingsManager> settingsManager,
@@ -33,15 +35,32 @@ public partial class ControllerPage : Page
         Lazy<ILayoutManager> layoutManager,
         Lazy<IVirtualManager> virtualManager,
         Lazy<IControllerManager> controllerManager,
-        Lazy<ITimerManager> timerManager)
+        Lazy<ITimerManager> timerManager,
+        IILayoutPage layoutPage)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.profileManager = profileManager;
         this.layoutManager = layoutManager;
         this.virtualManager = virtualManager;
         this.controllerManager = controllerManager;
         this.timerManager = timerManager;
+        this.layoutPage = layoutPage;
+
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void ControllerPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        ControllerPageLoaded?.Invoke(this, e);
+    }
+
+    public void Init()
+    {
 
         // manage events
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -51,19 +70,9 @@ public partial class ControllerPage : Page
         controllerManager.Value.Working += ControllerManager_Working;
         profileManager.Value.Applied += ProfileManager_Applied;
         virtualManager.Value.ControllerSelected += VirtualManager_ControllerSelected;
-       
+        this.Loaded += ControllerPage_Loaded;
     }
 
-    public ControllerPage(string Tag,
-        Lazy<ISettingsManager> settingsManager,
-        Lazy<IProfileManager> profileManager,
-        Lazy<ILayoutManager> layoutManager,
-        Lazy<IVirtualManager> virtualManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<ITimerManager> timerManager) : this(settingsManager, profileManager, layoutManager, virtualManager, controllerManager, timerManager)
-    {
-        this.Tag = Tag;
-    }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
     {
@@ -231,10 +240,10 @@ public partial class ControllerPage : Page
                 {
                     default:
                     case ContentDialogResult.Primary:
-                            Toggle_ControllerManagement.IsOn = false;
+                        Toggle_ControllerManagement.IsOn = false;
                         break;
                     case ContentDialogResult.None:
-                            Toggle_ControllerManagement.IsOn = true;
+                        Toggle_ControllerManagement.IsOn = true;
                         break;
                 }
             }
@@ -311,7 +320,7 @@ public partial class ControllerPage : Page
             bool notmuted = !isHidden && hasVirtual && (!isSteam || (isSteam && !isMuted));
             HintsNotMuted.Visibility = notmuted ? Visibility.Visible : Visibility.Collapsed;
 
-            Hints.Visibility =  (HintsNoPhysicalConnected.Visibility == Visibility.Visible ||
+            Hints.Visibility = (HintsNoPhysicalConnected.Visibility == Visibility.Visible ||
                                 HintsHIDManagedByProfile.Visibility == Visibility.Visible ||
                                 HintsNeptuneHidden.Visibility == Visibility.Visible ||
                                 HintsNotMuted.Visibility == Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
@@ -400,7 +409,7 @@ public partial class ControllerPage : Page
     private void Button_Layout_Click(object sender, RoutedEventArgs e)
     {
         // prepare layout editor, desktopLayout gets saved automatically
-        LayoutTemplate desktopTemplate = new(layoutManager.Value.GetDesktop(),controllerManager,timerManager)
+        LayoutTemplate desktopTemplate = new(layoutManager.Value.GetDesktop(), controllerManager, timerManager)
         {
             Name = LayoutTemplate.DesktopLayout.Name,
             Description = LayoutTemplate.DesktopLayout.Description,
@@ -408,8 +417,8 @@ public partial class ControllerPage : Page
             Executable = string.Empty,
             Product = string.Empty // UI might've set something here, nullify
         };
-        MainWindow.layoutPage.UpdateLayoutTemplate(desktopTemplate);
-        MainWindow.NavView_Navigate(MainWindow.layoutPage);
+        layoutPage.UpdateLayoutTemplate(desktopTemplate);
+        MainWindow.NavView_Navigate((Page)layoutPage);
     }
 
     private void Toggle_DesktopLayout_Toggled(object sender, RoutedEventArgs e)

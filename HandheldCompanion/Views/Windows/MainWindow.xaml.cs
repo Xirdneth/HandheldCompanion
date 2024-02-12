@@ -25,6 +25,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Navigation;
+using Windows.Networking.NetworkOperators;
 using Windows.UI.ViewManagement;
 using static HandheldCompanion.Managers.InputsHotkey;
 using Application = System.Windows.Application;
@@ -45,21 +46,24 @@ public partial class MainWindow : GamepadWindow
     // page vars
     private static readonly Dictionary<string, Page> _pages = new();
 
-    public static ControllerPage controllerPage;
+    //public static ControllerPage controllerPage;
     public static DevicePage devicePage;
     public static PerformancePage performancePage;
-    public static ProfilesPage profilesPage;
+    //public static ProfilesPage profilesPage;
     public static SettingsPage settingsPage;
     public static AboutPage aboutPage;
     //public static OverlayPage overlayPage;
     public static HotkeysPage hotkeysPage;
-    public static LayoutPage layoutPage;
+    //public static LayoutPage layoutPage;
     public static NotificationsPage notificationsPage;
 
     // overlay(s) vars
     //public static OverlayModel overlayModel;
     private readonly IOverlayModel _overlayModel;
     private readonly IOverlayPage overlayPage;
+    private readonly Lazy<IILayoutPage> layoutPage;
+    private readonly IProfilesPage profilesPage;
+    private readonly IControllerPage controllerPage;
     public static OverlayTrackpad overlayTrackpad;
     public static OverlayQuickTools overlayquickTools;
 
@@ -141,10 +145,12 @@ public partial class MainWindow : GamepadWindow
         Lazy<IToastManager> toastManager,
         Lazy<ITimerManager> timerManager,
         IOverlayModel overlayModel,
-        IOverlayPage overlayPage
+        IOverlayPage overlayPage,
+        Lazy<IILayoutPage> layoutPage,
+        IProfilesPage profilesPage,
+        IControllerPage controllerPage
         )//Lazy<ILayoutTemplate> layoutTemplate
     {
-        InitializeComponent();
         this.gPUManager = gPUManager;
         this.powerProfileManager = powerProfileManager;
         this.profileManager = profileManager;
@@ -173,8 +179,12 @@ public partial class MainWindow : GamepadWindow
         this.timerManager = timerManager;
         this._overlayModel = overlayModel;
         this.overlayPage = overlayPage;
+        this.layoutPage = layoutPage;
+        this.profilesPage = profilesPage;
+        this.controllerPage = controllerPage;
         this.layoutTemplate = layoutTemplate;
 
+        InitializeComponent();
 
         CurrentAssembly = Assembly.GetExecutingAssembly();
         fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
@@ -486,14 +496,10 @@ public partial class MainWindow : GamepadWindow
     private void loadPages()
     {
         // initialize pages
-        controllerPage = new ControllerPage("controller",
-            settingsManager,
-            profileManager,
-            layoutManager,
-            virtualManager,
-            controllerManager,
-            timerManager);
-        controllerPage.Loaded += ControllerPage_Loaded;
+        controllerPage.SetTag("controller");
+        controllerPage.ControllerPageLoaded += ControllerPage_Loaded;
+        controllerPage.Init();
+       
 
         devicePage = new DevicePage("device",
             settingsManager);
@@ -503,20 +509,10 @@ public partial class MainWindow : GamepadWindow
             performanceManager,
             platformManager,
             multimediaManager);
-        profilesPage = new ProfilesPage("profiles",
-            profileManager,
-            powerProfileManager,
-            settingsManager,
-            platformManager,
-            gPUManager,
-            performanceManager,
-            multimediaManager,
-            motionManager,
-            hotkeysManager,
-            inputsManager,
-            controllerManager,
-            layoutTemplate,
-            timerManager);
+
+        profilesPage.SetTag("profiles");
+        profilesPage.Init();
+
         settingsPage = new SettingsPage("settings",
             settingsManager,
             controllerManager,
@@ -526,31 +522,26 @@ public partial class MainWindow : GamepadWindow
         aboutPage = new AboutPage("about");
         overlayPage.SetTag("overlay");
         overlayPage.Init();
+
         hotkeysPage = new HotkeysPage("hotkeys",
             hotkeysManager);
-        layoutPage = new LayoutPage("layout", navView,
-            settingsManager,
-            profileManager,
-            layoutManager,
-            controllerManager,
-            virtualManager,
-            deviceManager,
-            hotkeysManager,
-            timerManager,
-            inputsManager);
+
+        layoutPage.Value.SetTag("layout");
+        layoutPage.Value.SetParentNavView(navView);
+        layoutPage.Value.Init();
         notificationsPage = new NotificationsPage("notifications");
         notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
 
         // store pages
-        _pages.Add("ControllerPage", controllerPage);
+        _pages.Add("ControllerPage", (Page)controllerPage);
         _pages.Add("DevicePage", devicePage);
         _pages.Add("PerformancePage", performancePage);
-        _pages.Add("ProfilesPage", profilesPage);
+        _pages.Add("ProfilesPage", (Page)profilesPage);
         _pages.Add("AboutPage", aboutPage);
         _pages.Add("OverlayPage", (Page)overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
-        _pages.Add("LayoutPage", layoutPage);
+        _pages.Add("LayoutPage", (Page)layoutPage.Value);
         _pages.Add("NotificationsPage", notificationsPage);
     }
 
@@ -639,7 +630,7 @@ public partial class MainWindow : GamepadWindow
         source.AddHook(WndProc); // Hook into the window's message loop
     }
 
-    private void ControllerPage_Loaded(object sender, RoutedEventArgs e)
+    public void ControllerPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (IsReady)
             return;
@@ -841,7 +832,7 @@ public partial class MainWindow : GamepadWindow
         settingsPage.Page_Closed();
         overlayPage.Page_Closed();
         hotkeysPage.Page_Closed();
-        layoutPage.Page_Closed();
+        layoutPage.Value.Page_Closed();
         notificationsPage.Page_Closed();
 
         // force kill application

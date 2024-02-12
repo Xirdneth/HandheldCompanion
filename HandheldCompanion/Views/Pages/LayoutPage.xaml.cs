@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Navigation;
 using Page = System.Windows.Controls.Page;
 
@@ -20,7 +21,7 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for ControllerSettings.xaml
 /// </summary>
-public partial class LayoutPage : Page
+public partial class LayoutPage : Page, IILayoutPage
 {
     private LayoutTemplate currentTemplate { get; set; }
     protected LockObject updateLock = new();
@@ -46,7 +47,7 @@ public partial class LayoutPage : Page
     private string preNavItemTag;
 
     public LayoutPage(
-        Lazy<ISettingsManager> settingsManager, 
+        Lazy<ISettingsManager> settingsManager,
         Lazy<IProfileManager> profileManager,
         Lazy<ILayoutManager> layoutManager,
         Lazy<IControllerManager> controllerManager,
@@ -56,7 +57,6 @@ public partial class LayoutPage : Page
         Lazy<ITimerManager> timerManager,
         Lazy<IInputsManager> inputsManager)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.profileManager = profileManager;
         this.layoutManager = layoutManager;
@@ -66,38 +66,19 @@ public partial class LayoutPage : Page
         this.hotkeysManager = hotkeysManager;
         this.timerManager = timerManager;
         this.inputsManager = inputsManager;
-        joysticksPage = new(controllerManager, timerManager);
-        trackpadsPage = new(controllerManager, timerManager);
-        triggersPage = new(controllerManager,timerManager);
-        currentTemplate = new();
-        buttonsPage = new(controllerManager, timerManager);
-        dpadPage = new(controllerManager,timerManager);
-        gyroPage = new(hotkeysManager, controllerManager, inputsManager, timerManager);
+
+        InitializeComponent();
     }
 
-    public LayoutPage(string Tag, NavigationView parent,
-        Lazy<ISettingsManager> settingsManager,
-        Lazy<IProfileManager> profileManager,
-        Lazy<ILayoutManager> layoutManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<IVirtualManager> virtualManager,
-        Lazy<IDeviceManager> deviceManager,
-        Lazy<IHotkeysManager> hotkeysManager,
-        Lazy<ITimerManager> timerManager,
-        Lazy<IInputsManager> inputsManager) : 
-        this(
-            settingsManager, 
-            profileManager, 
-            layoutManager, 
-            controllerManager, 
-            virtualManager, 
-            deviceManager,
-            hotkeysManager,
-            timerManager,
-            inputsManager)
+    public void Init()
     {
-        this.Tag = Tag;
-        this.parentNavView = parent;
+        joysticksPage = new(controllerManager, timerManager);
+        trackpadsPage = new(controllerManager, timerManager);
+        triggersPage = new(controllerManager, timerManager);
+        currentTemplate = new();
+        buttonsPage = new(controllerManager, timerManager);
+        dpadPage = new(controllerManager, timerManager);
+        gyroPage = new(hotkeysManager, controllerManager, inputsManager, timerManager);
 
         // create controller related pages
         this.pages = new()
@@ -149,10 +130,17 @@ public partial class LayoutPage : Page
         deviceManager.Value.UsbDeviceArrived += DeviceManager_UsbDeviceUpdated;
         deviceManager.Value.UsbDeviceRemoved += DeviceManager_UsbDeviceUpdated;
         profileManager.Value.Updated += ProfileManager_Updated;
-
-        
     }
 
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void SetParentNavView(NavigationView parent)
+    {
+        this.parentNavView = parent;
+    }
     private void ProfileManager_Updated(Profile profile, UpdateSource source, bool isCurrent)
     {
         if (!MainWindow.CurrentPageName.Equals("LayoutPage"))
@@ -160,12 +148,12 @@ public partial class LayoutPage : Page
 
         // update layout page if layout was updated elsewhere
         // good enough
-        switch(source)
+        switch (source)
         {
             case UpdateSource.QuickProfilesPage:
                 {
                     if (currentTemplate.Executable.Equals(profile.Executable))
-                        MainWindow.layoutPage.UpdateLayout(profile.Layout);
+                        UpdateLayout(profile.Layout);
                 }
                 break;
         }

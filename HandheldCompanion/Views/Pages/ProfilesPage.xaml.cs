@@ -28,7 +28,7 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for Profiles.xaml
 /// </summary>
-public partial class ProfilesPage : Page
+public partial class ProfilesPage : Page, IProfilesPage
 {
     // when set on start cannot be null anymore
     public static Profile selectedProfile;
@@ -47,34 +47,17 @@ public partial class ProfilesPage : Page
     private readonly Lazy<IHotkeysManager> hotkeysManager;
     private readonly Lazy<IInputsManager> inputsManager;
     private readonly Lazy<IControllerManager> controllerManager;
-    private readonly Lazy<ILayoutTemplate> layoutTemplate;
     private readonly Lazy<ITimerManager> timerManager;
+    private readonly IILayoutPage layoutPage;
     private LockObject updateLock = new();
 
     private const int UpdateInterval = 500;
     private static Timer UpdateTimer;
 
-    public ProfilesPage(string Tag, Lazy<IProfileManager> profileManager,
+    public ProfilesPage(
+        Lazy<IProfileManager> profileManager,
         Lazy<IPowerProfileManager> powerProfileManager,
         Lazy<ISettingsManager> settingsManager,
-        Lazy<IPlatformManager> platformManager, 
-        Lazy<IGPUManager> gPUManager,
-        Lazy<IPerformanceManager> performanceManager,
-        Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IMotionManager> motionManager,
-        Lazy<IHotkeysManager> hotkeysManager,
-        Lazy<IInputsManager> inputsManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<ILayoutTemplate> layoutTemplate,
-        Lazy<ITimerManager> timerManager) : this(profileManager, powerProfileManager, settingsManager, platformManager, gPUManager, performanceManager, multimediaManager, motionManager, hotkeysManager, inputsManager, controllerManager,layoutTemplate, timerManager)
-    {
-        this.Tag = Tag;
-    }
-
-    public ProfilesPage(
-        Lazy<IProfileManager> profileManager, 
-        Lazy<IPowerProfileManager> powerProfileManager, 
-        Lazy<ISettingsManager> settingsManager, 
         Lazy<IPlatformManager> platformManager,
         Lazy<IGPUManager> gPUManager,
         Lazy<IPerformanceManager> performanceManager,
@@ -83,10 +66,9 @@ public partial class ProfilesPage : Page
         Lazy<IHotkeysManager> hotkeysManager,
         Lazy<IInputsManager> inputsManager,
         Lazy<IControllerManager> controllerManager,
-        Lazy<ILayoutTemplate> layoutTemplate,
-        Lazy<ITimerManager> timerManager)
+        Lazy<ITimerManager> timerManager,
+        IILayoutPage layoutPage)
     {
-        InitializeComponent();
         this.profileManager = profileManager;
         this.powerProfileManager = powerProfileManager;
         this.settingsManager = settingsManager;
@@ -98,9 +80,19 @@ public partial class ProfilesPage : Page
         this.hotkeysManager = hotkeysManager;
         this.inputsManager = inputsManager;
         this.controllerManager = controllerManager;
-        this.layoutTemplate = layoutTemplate;
         this.timerManager = timerManager;
-        // manage events
+        this.layoutPage = layoutPage;
+        InitializeComponent();
+
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void Init()
+    {
         profileManager.Value.Deleted += ProfileDeleted;
         profileManager.Value.Updated += ProfileUpdated;
         profileManager.Value.Applied += ProfileApplied;
@@ -122,8 +114,8 @@ public partial class ProfilesPage : Page
 
         // force call
         RTSS_Updated(platformManager.Value.RTSS.Status);
-        page0 = new ("SettingsMode0",hotkeysManager,motionManager,inputsManager);
-        page1 = new ("SettingsMode1",motionManager);
+        page0 = new("SettingsMode0", hotkeysManager, motionManager, inputsManager);
+        page1 = new("SettingsMode1", motionManager);
     }
 
     private void MultimediaManager_Initialized()
@@ -347,7 +339,7 @@ public partial class ProfilesPage : Page
                         break;
                 }
 
-                Profile profile = new Profile(path,profileManager);
+                Profile profile = new Profile(path, profileManager);
                 Layout toCloneLayout = profileManager.Value.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout;
                 profile.Layout = toCloneLayout.Clone() as Layout;
                 profile.LayoutTitle = LayoutTemplate.DefaultLayout.Name;
@@ -817,7 +809,7 @@ public partial class ProfilesPage : Page
     private void ControllerSettingsButton_Click(object sender, RoutedEventArgs e)
     {
         // prepare layout editor
-        LayoutTemplate layoutTemplate = new(selectedProfile.Layout,controllerManager,timerManager)
+        LayoutTemplate layoutTemplate = new(selectedProfile.Layout, controllerManager, timerManager)
         {
             Name = selectedProfile.LayoutTitle,
             Description = "Your modified layout for this executable.",
@@ -827,8 +819,8 @@ public partial class ProfilesPage : Page
         };
         layoutTemplate.Updated += Template_Updated;
 
-        MainWindow.layoutPage.UpdateLayoutTemplate(layoutTemplate);
-        MainWindow.NavView_Navigate(MainWindow.layoutPage);
+        layoutPage.UpdateLayoutTemplate(layoutTemplate);
+        MainWindow.NavView_Navigate((Page)layoutPage);
     }
 
     private void Template_Updated(LayoutTemplate layoutTemplate)
@@ -1053,7 +1045,7 @@ public partial class ProfilesPage : Page
     {
         if (selectedProfile is null)
             return;
-        
+
         LogManager.LogInformation($"Submitting profile in ProfilesPage: {selectedProfile} - is Sub Profile? {selectedProfile.IsSubProfile}");
 
         switch (source)
@@ -1177,7 +1169,7 @@ public partial class ProfilesPage : Page
         {
             selectedProfile.ScalingMode = GPUScalingComboBox.SelectedIndex;
         }
-     
+
         UpdateProfile();
     }
 

@@ -101,6 +101,9 @@ public partial class App : Application
 
                 services.AddSingleton<IOverlayModel, OverlayModel>();
                 services.AddSingleton<IOverlayPage, OverlayPage>();
+                services.AddLazySingleton<IILayoutPage, LayoutPage>();
+                services.AddSingleton<IProfilesPage, ProfilesPage>();
+                services.AddSingleton<IControllerPage, ControllerPage>();
 
                 //services.AddLazySingleton<ILayoutTemplate, LayoutTemplate>();
 
