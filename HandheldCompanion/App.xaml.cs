@@ -11,6 +11,8 @@ using HandheldCompanion.Processors;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using HandheldCompanion.Views.Pages;
+using HandheldCompanion.Views.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -96,6 +98,10 @@ public partial class App : Application
                 services.AddLazySingleton<IXInputController, XInputController>();
                 services.AddLazySingleton<IVangoghGPU, VangoghGPU>();
                 services.AddSingleton<IProcessor, Processor>();
+
+                services.AddSingleton<IOverlayModel, OverlayModel>();
+                services.AddSingleton<IOverlayPage, OverlayPage>();
+
                 //services.AddLazySingleton<ILayoutTemplate, LayoutTemplate>();
 
                 services.AddLogging();

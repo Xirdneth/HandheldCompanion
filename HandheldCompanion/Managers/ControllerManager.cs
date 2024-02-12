@@ -6,6 +6,7 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
+using HandheldCompanion.Views.Windows;
 using Nefarius.Utilities.DeviceManagement.Drivers;
 using Nefarius.Utilities.DeviceManagement.Extensions;
 using Nefarius.Utilities.DeviceManagement.PnP;
@@ -53,6 +54,7 @@ public class ControllerManager : IControllerManager
     private readonly Lazy<ITimerManager> timerManager;
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<IXInputController> xInputController;
+    private readonly IOverlayModel overlayModel;
     private IController? targetController;
     private FocusedWindow focusedWindows = FocusedWindow.None;
     private ProcessEx? foregroundProcess;
@@ -72,7 +74,8 @@ public class ControllerManager : IControllerManager
         Lazy<IInputsManager> inputsManager,
         Lazy<ITimerManager> timerManager,
         Lazy<IControllerManager> controllerManager,
-         Lazy<IXInputController> xInputController)
+         Lazy<IXInputController> xInputController,
+         IOverlayModel overlayModel)
     {
         watchdogThread = new Thread(watchdogThreadLoop);
         watchdogThread.IsBackground = true;
@@ -88,6 +91,7 @@ public class ControllerManager : IControllerManager
         this.timerManager = timerManager;
         this.controllerManager = controllerManager;
         this.xInputController = xInputController;
+        this.overlayModel = overlayModel;
         XInputController? emptyXInput = new(deviceManager,timerManager,settingsManager,controllerManager);
         DS4Controller? emptyDS4 = new(controllerManager,settingsManager,timerManager);
 }
@@ -1135,7 +1139,7 @@ public class ControllerManager : IControllerManager
         motionManager.Value.UpdateReport(controllerState);
 
         // pass inputs to Overlay Model
-        MainWindow.overlayModel.UpdateReport(controllerState);
+        overlayModel.UpdateReport(controllerState);
 
         // pass inputs to Layout manager
         controllerState = layoutManager.Value.MapController(controllerState);

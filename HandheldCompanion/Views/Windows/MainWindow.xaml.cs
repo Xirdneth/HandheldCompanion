@@ -51,13 +51,15 @@ public partial class MainWindow : GamepadWindow
     public static ProfilesPage profilesPage;
     public static SettingsPage settingsPage;
     public static AboutPage aboutPage;
-    public static OverlayPage overlayPage;
+    //public static OverlayPage overlayPage;
     public static HotkeysPage hotkeysPage;
     public static LayoutPage layoutPage;
     public static NotificationsPage notificationsPage;
 
     // overlay(s) vars
-    public static OverlayModel overlayModel;
+    //public static OverlayModel overlayModel;
+    private readonly IOverlayModel _overlayModel;
+    private readonly IOverlayPage overlayPage;
     public static OverlayTrackpad overlayTrackpad;
     public static OverlayQuickTools overlayquickTools;
 
@@ -137,7 +139,9 @@ public partial class MainWindow : GamepadWindow
         Lazy<IDeviceManager> deviceManager,
         Lazy<ISystemManager> systemManager,
         Lazy<IToastManager> toastManager,
-        Lazy<ITimerManager> timerManager
+        Lazy<ITimerManager> timerManager,
+        IOverlayModel overlayModel,
+        IOverlayPage overlayPage
         )//Lazy<ILayoutTemplate> layoutTemplate
     {
         InitializeComponent();
@@ -167,7 +171,11 @@ public partial class MainWindow : GamepadWindow
         this.systemManager = systemManager;
         this.toastManager = toastManager;
         this.timerManager = timerManager;
+        this._overlayModel = overlayModel;
+        this.overlayPage = overlayPage;
         this.layoutTemplate = layoutTemplate;
+
+
         CurrentAssembly = Assembly.GetExecutingAssembly();
         fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
         CurrentWindow = this;
@@ -183,31 +191,6 @@ public partial class MainWindow : GamepadWindow
 
         // fix touch support
         TabletDeviceCollection tabletDevices = Tablet.TabletDevices;
-        /*if (tabletDevices.Count > 0)
-        {
-            // Get the Type of InputManager.  
-            Type inputManagerType = typeof(System.Windows.Input.InputManager);
-
-            // Call the StylusLogic method on the InputManager.Current instance.  
-            object stylusLogic = inputManagerType.InvokeMember("StylusLogic",
-                        BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.NonPublic,
-                        null, InputManager.Current, null);
-
-            if (stylusLogic != null)
-            {
-                //  Get the type of the stylusLogic returned from the call to StylusLogic.  
-                Type stylusLogicType = stylusLogic.GetType();
-
-                // Loop until there are no more devices to remove.  
-                while (tabletDevices.Count > 0)
-                {
-                    // Remove the first tablet device in the devices collection.  
-                    stylusLogicType.InvokeMember("OnTabletRemoved",
-                            BindingFlags.InvokeMethod | BindingFlags.Instance | BindingFlags.NonPublic,
-                            null, stylusLogic, new object[] { (uint)0 });
-                }
-            }
-        }*/
 
         // get first start
         bool FirstStart = settingsManager.Value.GetBoolean("FirstStart");
@@ -541,9 +524,8 @@ public partial class MainWindow : GamepadWindow
             multimediaManager,
             updateManager);
         aboutPage = new AboutPage("about");
-        overlayPage = new OverlayPage("overlay",
-            settingsManager,
-            platformManager);
+        overlayPage.SetTag("overlay");
+        overlayPage.Init();
         hotkeysPage = new HotkeysPage("hotkeys",
             hotkeysManager);
         layoutPage = new LayoutPage("layout", navView,
@@ -565,7 +547,7 @@ public partial class MainWindow : GamepadWindow
         _pages.Add("PerformancePage", performancePage);
         _pages.Add("ProfilesPage", profilesPage);
         _pages.Add("AboutPage", aboutPage);
-        _pages.Add("OverlayPage", overlayPage);
+        _pages.Add("OverlayPage", (Page)overlayPage);
         _pages.Add("SettingsPage", settingsPage);
         _pages.Add("HotkeysPage", hotkeysPage);
         _pages.Add("LayoutPage", layoutPage);
@@ -575,11 +557,8 @@ public partial class MainWindow : GamepadWindow
     private void loadWindows()
     {
         // initialize overlay
-        overlayModel = new OverlayModel(
-            settingsManager,
-            performanceManager,
-            motionManager,
-            hotkeysManager);
+        _overlayModel.Init();
+
         overlayTrackpad = new OverlayTrackpad(
             settingsManager,
             controllerManager,
@@ -619,7 +598,7 @@ public partial class MainWindow : GamepadWindow
                 overlayquickTools.ToggleVisibility();
                 break;
             case "overlayGamepad":
-                overlayModel.ToggleVisibility();
+                _overlayModel.ToggleVisibility();
                 break;
             case "overlayTrackpads":
                 overlayTrackpad.ToggleVisibility();
@@ -693,7 +672,7 @@ public partial class MainWindow : GamepadWindow
     {
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            overlayModel.UpdateHIDMode(HIDmode);
+            _overlayModel.UpdateHIDMode(HIDmode);
         });
         CurrentDevice.SetKeyPressDelay(HIDmode);
     }
@@ -832,7 +811,7 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.Visible = false;
         notifyIcon.Dispose();
 
-        overlayModel.Close();
+        _overlayModel.Close();
         overlayTrackpad.Close();
         overlayquickTools.Close(true);
 

@@ -5,6 +5,7 @@ using HandheldCompanion.Misc;
 using HandheldCompanion.Sensors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
+using HandheldCompanion.Views.Windows;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,14 +48,20 @@ namespace HandheldCompanion.Managers
         public bool IsInitialized;
         private readonly Lazy<IProfileManager> profileManager;
         private readonly Lazy<ITimerManager> timerManager;
+        private readonly IOverlayModel overlayModel;
 
         public event InitializedEventHandler Initialized;
         public delegate void InitializedEventHandler();
 
-        public MotionManager(Lazy<IProfileManager> profileManager,Lazy<ITimerManager> timerManager, Lazy<IControllerManager> controllerManager)
+        public MotionManager(
+            Lazy<IProfileManager> profileManager,
+            Lazy<ITimerManager> timerManager, 
+            Lazy<IControllerManager> controllerManager,
+            IOverlayModel overlayModel)
         {
             this.profileManager = profileManager;
             this.timerManager = timerManager;
+            this.overlayModel = overlayModel;
             float samplePeriod = timerManager.Value.GetPeriod() / 1000f;
             madgwickAHRS = new(samplePeriod, 0.01f);
             gyroAction = new(controllerManager,timerManager);
@@ -127,7 +134,7 @@ namespace HandheldCompanion.Managers
         {
             Profile current = profileManager.Value.GetCurrent();
 
-            if (MainWindow.overlayModel.Visibility == Visibility.Visible && MainWindow.overlayModel.MotionActivated)
+            if (overlayModel.Visibility == Visibility.Visible && overlayModel.MotionActivated)
             {
                 Vector3 AngularVelocityRad = new(
                     -InputUtils.deg2rad(gyroscope[(int)SensorIndex.Raw].X),

@@ -20,7 +20,7 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for Overlay.xaml
 /// </summary>
-public partial class OverlayModel : OverlayWindow
+public partial class OverlayModel : OverlayWindow, IOverlayModel
 {
     private readonly Timer UpdateTimer;
     private readonly Lazy<ISettingsManager> settingsManager;
@@ -28,19 +28,19 @@ public partial class OverlayModel : OverlayWindow
     private readonly Lazy<IMotionManager> motionManager;
     private readonly Lazy<IHotkeysManager> hotkeysManager;
     private IModel CurrentModel;
-    public Vector3D DesiredAngleDeg = new(0, 0, 0);
+
     private Quaternion DevicePose = new(0.0f, 0.0f, 1.0f, 0.0f);
     private Vector3D DevicePoseRad = new(0, 3.14, 0);
     private Vector3D DiffAngle = new(0, 0, 0);
 
-    public bool FaceCamera = false;
+    public bool FaceCamera { get; set; } = false;
     public Vector3D FaceCameraObjectAlignment = new(0.0d, 0.0d, 0.0d);
     private HIDmode HIDmode;
 
     private ControllerState Inputs = new();
 
     private OverlayModelMode Modelmode;
-    public bool MotionActivated = true;
+    public bool MotionActivated { get; set; } = true;
 
     // TODO Dummy variables, placeholder and for testing 
     private float ShoulderButtonsAngleDegPrev;
@@ -51,29 +51,146 @@ public partial class OverlayModel : OverlayWindow
     private float TriggerAngleShoulderRight;
     private float TriggerAngleShoulderRightPrev;
 
+    public VerticalAlignment VerticalAlignment 
+    { 
+        get 
+        { 
+            return base.VerticalAlignment; 
+        } 
+        set 
+        {
+            base.VerticalAlignment = value;
+        } 
+    }
+    public HorizontalAlignment HorizontalAlignment
+    {
+        get
+        {
+            return base.HorizontalAlignment;
+        }
+        set
+        {
+            base.HorizontalAlignment = value;
+        }
+    }
+    public double Height
+    {
+        get
+        {
+            return base.Height;
+        }
+        set
+        {
+            base.Height = value;
+        }
+    }
+    public double Width
+    {
+        get
+        {
+            return base.Width;
+        }
+        set
+        {
+            base.Width = value;
+        }
+    }
+    private Vector3D _desiredAngleDeg;
+    public Vector3D DesiredAngleDeg
+    {
+        get => _desiredAngleDeg;
+        set => _desiredAngleDeg = value;
+    }
+
+    public void SetDesiredAngleDegX(double value)
+    {
+        _desiredAngleDeg.X = value;
+    }
+
+    public void SetDesiredAngleDegY(double value)
+    {
+        _desiredAngleDeg.Y = value;
+    }
+
+    public void ModelViewPortSetValue(DependencyProperty dependencyProperty, EdgeMode edgeMode)
+    {
+        ModelViewPort.SetValue(dependencyProperty, edgeMode);
+    }
+
+    public void ModelViewPortSetOpacity(double value)
+    {
+        ModelViewPort.Opacity = value;
+    }
+
+    public Brush Background
+    {
+        get
+        {
+            return base.Background;
+        }
+        set
+        {
+            base.Background = value;
+        }
+    }
+
+    public bool Topmost
+    {
+        get
+        {
+            return base.Topmost;
+        }
+        set
+        {
+            base.Topmost = value;
+        }
+    }
+
+    public Visibility Visibility
+    {
+        get
+        {
+            return base.Visibility;
+        }
+        set
+        {
+            base.Visibility = value;
+        }
+    }
+
     public OverlayModel(
-        Lazy<ISettingsManager> settingsManager, 
-        Lazy<IPerformanceManager> performanceManager, 
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IPerformanceManager> performanceManager,
         Lazy<IMotionManager> motionManager,
-        Lazy<IHotkeysManager> hotkeysManager) :base(hotkeysManager)
+        Lazy<IHotkeysManager> hotkeysManager) : base(hotkeysManager)
     {
         InitializeComponent();
         this.settingsManager = settingsManager;
         this.performanceManager = performanceManager;
         this.motionManager = motionManager;
         this.hotkeysManager = hotkeysManager;
+        UpdateTimer = new Timer(33);
+        DesiredAngleDeg = new(0, 0, 0);
+    }
+
+    public void Init()
+    {
         this._hotkeyId = 1;
 
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
         motionManager.Value.OverlayModelUpdate += MotionManager_OverlayModelUpdate;
 
         // initialize timers
-        UpdateTimer = new Timer(33);
+        
         UpdateTimer.AutoReset = true;
         UpdateTimer.Elapsed += DrawModel;
 
         UpdateModel();
+    }
 
+    public void Close()
+    {
+        base.Close();
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)
@@ -235,6 +352,7 @@ public partial class OverlayModel : OverlayWindow
             }
         });
     }
+
 
     #region ModelVisual3D
 
