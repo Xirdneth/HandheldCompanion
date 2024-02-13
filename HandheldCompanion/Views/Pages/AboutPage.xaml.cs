@@ -1,4 +1,5 @@
 using HandheldCompanion.Devices;
+using HandheldCompanion.Managers;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Diagnostics;
@@ -12,18 +13,20 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for AboutPage.xaml
 /// </summary>
-public partial class AboutPage : Page
+public partial class AboutPage : Page, IAboutPage
 {
     public AboutPage()
     {
         InitializeComponent();
     }
 
-    public AboutPage(string Tag) : this()
+    public void SetTag(string Tag)
     {
         this.Tag = Tag;
+    }
 
-        // call functions
+    public void Init()
+    {
         UpdateDevice(null);
     }
 

@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers.Hid;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Sensors;
 using HandheldCompanion.Utils;
 using Microsoft.Win32.SafeHandles;

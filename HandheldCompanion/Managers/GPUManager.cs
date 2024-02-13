@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.GraphicsProcessingUnit;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Views;
 using System;
 

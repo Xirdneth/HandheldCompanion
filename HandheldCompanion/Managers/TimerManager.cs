@@ -1,4 +1,5 @@
-﻿using PrecisionTiming;
+﻿using HandheldCompanion.Managers.Interfaces;
+using PrecisionTiming;
 using System;
 using System.Diagnostics;
 

@@ -1,8 +1,9 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Pages.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Windows;

@@ -1,11 +1,13 @@
 ﻿using HandheldCompanion.Devices;
-using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.QuickPages.Interfaces;
 using HandheldCompanion.Views.Windows;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Timers;
@@ -18,7 +20,7 @@ namespace HandheldCompanion.Views.QuickPages;
 /// <summary>
 ///     Interaction logic for QuickPerformancePage.xaml
 /// </summary>
-public partial class QuickPerformancePage : Page
+public partial class QuickPerformancePage : Page, IQuickPerformancePage
 {
     private const int UpdateInterval = 500;
     private readonly Timer UpdateTimer;
@@ -27,40 +29,37 @@ public partial class QuickPerformancePage : Page
     private readonly Lazy<IPerformanceManager> performanceManager;
     private readonly Lazy<IPowerProfileManager> powerProfileManager;
     private readonly Lazy<IMultimediaManager> multimediaManager;
+    private readonly Lazy<IOverlayQuickTools> overlayQuickTools;
     private PowerProfile selectedProfile;
 
     private LockObject updateLock = new();
-
-    public QuickPerformancePage(string Tag,
-        Lazy<ISettingsManager> settingsManager,
-        Lazy<IPlatformManager> platformManager,
-        Lazy<IPerformanceManager> performanceManager,
-        Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, platformManager, performanceManager, powerProfileManager, multimediaManager)
-    {
-        this.Tag = Tag;
-    }
 
     public QuickPerformancePage(
         Lazy<ISettingsManager> settingsManager,
         Lazy<IPlatformManager> platformManager,
         Lazy<IPerformanceManager> performanceManager,
         Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IMultimediaManager> multimediaManager)
+        Lazy<IMultimediaManager> multimediaManager,
+        Lazy<IOverlayQuickTools> overlayQuickTools)
     {
-        InitializeComponent();
-
         this.settingsManager = settingsManager;
         this.platformManager = platformManager;
         this.performanceManager = performanceManager;
         this.powerProfileManager = powerProfileManager;
         this.multimediaManager = multimediaManager;
-        /*
-performanceManager.Value.PowerModeChanged += PerformanceManager_PowerModeChanged;
-performanceManager.Value.PerfBoostModeChanged += PerformanceManager_PerfBoostModeChanged;
-performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
-*/
+        this.overlayQuickTools = overlayQuickTools;
+        UpdateTimer = new Timer(UpdateInterval);
 
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void Init()
+    {
         // manage events
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
         platformManager.Value.RTSS.Updated += RTSS_Updated;
@@ -83,13 +82,12 @@ performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
 
         FanModeSoftware.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.FanControl);
 
-        UpdateTimer = new Timer(UpdateInterval);
+
         UpdateTimer.AutoReset = false;
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // force call
         RTSS_Updated(platformManager.Value.RTSS.Status);
-        
     }
 
     private void SystemManager_PrimaryScreenChanged(DesktopScreen desktopScreen)
@@ -106,7 +104,7 @@ performanceManager.Value.EPPChanged += PerformanceManager_EPPChanged;
         // current power profile deleted, return to previous page
         bool isCurrent = selectedProfile?.Guid == profile.Guid;
         if (isCurrent)
-            MainWindow.overlayquickTools.ContentFrame.GoBack();
+            overlayQuickTools.Value.OverlayQuickToolsContentFrame.GoBack();
     }
 
     private void PowerProfileManager_Updated(PowerProfile profile, UpdateSource source)

@@ -1,5 +1,5 @@
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using SharpDX.XInput;
 using System;

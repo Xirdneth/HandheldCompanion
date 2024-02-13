@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Platforms;
 using Microsoft.Extensions.DependencyInjection;
 using System;

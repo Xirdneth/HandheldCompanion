@@ -1,5 +1,6 @@
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Views.Classes;
+using HandheldCompanion.Views.Windows.Interfaces;
 using System;
 using System.ComponentModel;
 using System.Windows;
@@ -14,7 +15,7 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for Overlay.xaml
 /// </summary>
-public partial class OverlayTrackpad : OverlayWindow
+public partial class OverlayTrackpad : OverlayWindow, IOverlayTrackpad
 {
     private readonly double dpiInput;
 
@@ -25,26 +26,37 @@ public partial class OverlayTrackpad : OverlayWindow
     private readonly double TrackpadOpacityTouched = 0.10; // extra opacity when touched
     private readonly Lazy<ISettingsManager> settingsManager;
     private readonly Lazy<IControllerManager> controllerManager;
-    private readonly Lazy<IHotkeysManager> hotkeysManager;
 
     public OverlayTrackpad(
-        Lazy<ISettingsManager> settingsManager, 
+        Lazy<ISettingsManager> settingsManager,
         Lazy<IControllerManager> controllerManager,
         Lazy<IHotkeysManager> hotkeysManager) : base(hotkeysManager)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.controllerManager = controllerManager;
-        this.hotkeysManager = hotkeysManager;
-        this._hotkeyId = 2;
-
-        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
-
         // touch vars
         dpiInput = GetWindowsScaling();
         leftInput = new TouchInput();
         rightInput = new TouchInput();
-        
+
+        InitializeComponent();
+    }
+
+    public void Init()
+    {
+        this._hotkeyId = 2;
+
+        settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
+    }
+
+    public void Close()
+    {
+        base.Close();
+    }
+
+    public void ToggleVisibility()
+    {
+        base.ToggleVisibility();
     }
 
     private void SettingsManager_SettingValueChanged(string name, object value)

@@ -1,11 +1,12 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Sensors;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
-using HandheldCompanion.Views.Windows;
+using HandheldCompanion.Views.Windows.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

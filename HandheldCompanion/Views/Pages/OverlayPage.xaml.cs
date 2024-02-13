@@ -1,9 +1,10 @@
 ﻿using ColorPicker;
 using ColorPicker.Models;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
-using HandheldCompanion.Views.Windows;
+using HandheldCompanion.Views.Pages.Interfaces;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Windows;

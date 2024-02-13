@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using NAudio.Vorbis;
 using NAudio.Wave;

@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Properties;
 using HandheldCompanion.Utils;
 using Nefarius.Utilities.DeviceManagement.Drivers;

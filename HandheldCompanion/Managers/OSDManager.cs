@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.GraphicsProcessingUnit;
+using HandheldCompanion.Managers.Interfaces;
 using PrecisionTiming;
 using RTSSSharedMemoryNET;
 using System;

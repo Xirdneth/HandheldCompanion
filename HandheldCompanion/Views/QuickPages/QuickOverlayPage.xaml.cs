@@ -1,5 +1,6 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Views.QuickPages.Interfaces;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,26 +11,27 @@ namespace HandheldCompanion.Views.QuickPages;
 /// <summary>
 ///     Interaction logic for QuickOverlayPage.xaml
 /// </summary>
-public partial class QuickOverlayPage : Page
+public partial class QuickOverlayPage : Page, IQuickOverlayPage
 {
     private readonly Lazy<ISettingsManager> settingsManager;
     private readonly Lazy<IPlatformManager> platformManager;
 
-    public QuickOverlayPage(string Tag,
+    public QuickOverlayPage(
         Lazy<ISettingsManager> settingsManager,
-        Lazy<IPlatformManager> platformManager) : this(settingsManager, platformManager)
+        Lazy<IPlatformManager> platformManager)
+    {
+        this.settingsManager = settingsManager;
+        this.platformManager = platformManager;
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
     {
         this.Tag = Tag;
     }
 
-    public QuickOverlayPage(
-        Lazy<ISettingsManager> settingsManager, 
-        Lazy<IPlatformManager> platformManager)
+    public void Init()
     {
-        InitializeComponent();
-        this.settingsManager = settingsManager;
-        this.platformManager = platformManager;
-
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
 
         platformManager.Value.RTSS.Updated += RTSS_Updated;
@@ -39,7 +41,6 @@ public partial class QuickOverlayPage : Page
         // todo: make PlatformManager static
         RTSS_Updated(platformManager.Value.RTSS.Status);
         LibreHardwareMonitor_Updated(platformManager.Value.libreHardwareMonitor.Status);
-
     }
 
     private void LibreHardwareMonitor_Updated(PlatformStatus status)

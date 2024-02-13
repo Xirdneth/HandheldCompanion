@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using HandheldCompanion.Managers.Interfaces;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;

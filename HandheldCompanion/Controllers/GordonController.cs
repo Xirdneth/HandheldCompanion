@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Actions;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using SharpDX.XInput;
 using steam_hidapi.net;

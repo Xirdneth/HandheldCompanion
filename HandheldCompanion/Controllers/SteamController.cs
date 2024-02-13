@@ -1,5 +1,5 @@
 ﻿using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using steam_hidapi.net.Hid;
 using System;
 

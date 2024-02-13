@@ -2,7 +2,7 @@
 using HandheldCompanion.Actions;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using Newtonsoft.Json;
 using System;

@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using Microsoft.Win32;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;

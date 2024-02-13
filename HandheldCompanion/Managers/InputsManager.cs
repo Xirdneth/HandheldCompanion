@@ -2,6 +2,7 @@ using Gma.System.MouseKeyHook;
 using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Simulators;
 using HandheldCompanion.Views;
 using PrecisionTiming;

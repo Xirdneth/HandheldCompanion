@@ -1,10 +1,13 @@
 ﻿using HandheldCompanion.Controls;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
-using HandheldCompanion.Views.QuickPages;
+using HandheldCompanion.Views.Pages;
+using HandheldCompanion.Views.QuickPages.Interfaces;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -36,7 +39,7 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for QuickTools.xaml
 /// </summary>
-public partial class OverlayQuickTools : GamepadWindow
+public partial class OverlayQuickTools : GamepadWindow, IOverlayQuickTools
 {
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -75,59 +78,62 @@ public partial class OverlayQuickTools : GamepadWindow
     private readonly Lazy<ISettingsManager> settingsManager;
     private readonly Lazy<IHotkeysManager> hotkeysManager;
     private readonly Lazy<IMultimediaManager> multimediaManager;
-    private readonly Lazy<IProfileManager> profileManager;
-    private readonly Lazy<IPlatformManager> platformManager;
-    private readonly Lazy<IPowerProfileManager> powerProfileManager;
-    private readonly Lazy<IGPUManager> gPUManager;
-    private readonly Lazy<IPerformanceManager> performanceManager;
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<IUISounds> uISounds;
     private readonly Lazy<ISystemManager> systemManager;
     private readonly Lazy<IInputsManager> inputsManager;
-    private readonly Lazy<IProcessManager> processManager;
-    private readonly Lazy<ILayoutTemplate> layoutTemplate;
-    private readonly Lazy<ITimerManager> timerManager;
-    public QuickHomePage homePage;
-    public QuickDevicePage devicePage;
-    public QuickPerformancePage performancePage;
-    public QuickProfilesPage profilesPage;
-    public QuickOverlayPage overlayPage;
-    public QuickSuspenderPage suspenderPage;
 
+    private readonly Lazy<IQuickHomePage> quickHomePage;
+    private readonly Lazy<IQuickDevicePage> quickDevicePage;
+    private readonly Lazy<IPerformancePage> performancePage;
+    private readonly Lazy<IQuickProfilesPage> quickProfilesPage;
+    private readonly Lazy<IQuickOverlayPage> quickOverlayPage;
+    private readonly Lazy<IQuickSuspenderPage> quickSuspenderPage;
     private static OverlayQuickTools CurrentWindow;
     private string preNavItemTag;
 
+    public iNKORE.UI.WPF.Modern.Controls.Frame OverlayQuickToolsContentFrame { get => this.ContentFrame; set => this.ContentFrame = value; }
+
     public OverlayQuickTools(
-        Lazy<ISettingsManager> settingsManager, 
-        Lazy<IHotkeysManager> hotkeysManager, 
+        Lazy<ISettingsManager> settingsManager,
+        Lazy<IHotkeysManager> hotkeysManager,
         Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IProfileManager> profileManager,
-        Lazy<IPlatformManager> platformManager,
-        Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IGPUManager> gPUManager,
-        Lazy<IPerformanceManager> performanceManager,
         Lazy<IControllerManager> controllerManager,
         Lazy<IUISounds> uISounds,
         Lazy<ISystemManager> systemManager,
         Lazy<IInputsManager> inputsManager,
-        Lazy<IProcessManager> processManager,
-        Lazy<ITimerManager> timerManager)
+        Lazy<IQuickHomePage> quickHomePage,
+        Lazy<IQuickDevicePage> quickDevicePage,
+        Lazy<IPerformancePage> performancePage,
+        Lazy<IQuickProfilesPage> quickProfilesPage,
+        Lazy<IQuickOverlayPage> quickOverlayPage,
+        Lazy<IQuickSuspenderPage> quickSuspenderPage)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.hotkeysManager = hotkeysManager;
         this.multimediaManager = multimediaManager;
-        this.profileManager = profileManager;
-        this.platformManager = platformManager;
-        this.powerProfileManager = powerProfileManager;
-        this.gPUManager = gPUManager;
-        this.performanceManager = performanceManager;
         this.controllerManager = controllerManager;
         this.uISounds = uISounds;
         this.systemManager = systemManager;
         this.inputsManager = inputsManager;
-        this.processManager = processManager;
-        this.timerManager = timerManager;
+        this.quickHomePage = quickHomePage;
+        this.quickDevicePage = quickDevicePage;
+        this.performancePage = performancePage;
+        this.quickProfilesPage = quickProfilesPage;
+        this.quickOverlayPage = quickOverlayPage;
+        this.quickSuspenderPage = quickSuspenderPage;
+        clockUpdateTimer = new DispatcherTimer();
+
+        InitializeComponent();
+    }
+
+    public void UpdateDefaultStyle()
+    {
+        base.UpdateDefaultStyle();
+    }
+
+    public void Init()
+    {
         CurrentWindow = this;
 
         // used by gamepad navigation
@@ -135,7 +141,7 @@ public partial class OverlayQuickTools : GamepadWindow
 
         PreviewKeyDown += HandleEsc;
 
-        clockUpdateTimer = new DispatcherTimer();
+        
         clockUpdateTimer.Interval = TimeSpan.FromMilliseconds(500);
         clockUpdateTimer.Tick += UpdateTime;
 
@@ -143,19 +149,30 @@ public partial class OverlayQuickTools : GamepadWindow
         WM_PAINT_TIMER.Elapsed += WM_PAINT_TIMER_Tick;
 
         // create pages
-        homePage = new("quickhome",settingsManager,hotkeysManager,multimediaManager,profileManager);
-        devicePage = new("quickdevice",settingsManager,profileManager,multimediaManager);
-        performancePage = new("quickperformance",settingsManager,platformManager,performanceManager,powerProfileManager,multimediaManager);
-        profilesPage = new("quickprofiles",profileManager,powerProfileManager,platformManager,gPUManager,performanceManager,multimediaManager,hotkeysManager,inputsManager,processManager,controllerManager,timerManager);
-        overlayPage = new("quickoverlay",settingsManager,platformManager);
-        suspenderPage = new("quicksuspender",processManager);
+        quickHomePage.Value.SetTag("quickhome");
+        quickHomePage.Value.Init();
 
-        _pages.Add("QuickHomePage", homePage);
-        _pages.Add("QuickDevicePage", devicePage);
-        _pages.Add("QuickPerformancePage", performancePage);
-        _pages.Add("QuickProfilesPage", profilesPage);
-        _pages.Add("QuickOverlayPage", overlayPage);
-        _pages.Add("QuickSuspenderPage", suspenderPage);
+        quickDevicePage.Value.SetTag("quickdevice");
+        quickDevicePage.Value.Init();
+
+        performancePage.Value.SetTag("quickperformance");
+        performancePage.Value.Init();
+
+        quickProfilesPage.Value.SetTag("quickprofiles");
+        quickProfilesPage.Value.Init();
+
+        quickOverlayPage.Value.SetTag("quickoverlay");
+        quickOverlayPage.Value.Init();
+
+        quickSuspenderPage.Value.SetTag("quicksuspender");
+        quickSuspenderPage.Value.Init();
+
+        _pages.Add("QuickHomePage", (Page)quickHomePage.Value);
+        _pages.Add("QuickDevicePage", (Page)quickDevicePage.Value);
+        _pages.Add("QuickPerformancePage", (Page)performancePage.Value);
+        _pages.Add("QuickProfilesPage", (Page)quickProfilesPage.Value);
+        _pages.Add("QuickOverlayPage", (Page)quickOverlayPage.Value);
+        _pages.Add("QuickSuspenderPage", (Page)quickSuspenderPage.Value);
     }
 
     public static OverlayQuickTools GetCurrent()
@@ -287,7 +304,7 @@ public partial class OverlayQuickTools : GamepadWindow
         multimediaManager.Value.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
         // load gamepad navigation maanger
-        gamepadFocusManager = new(this, ContentFrame,settingsManager,controllerManager,uISounds,inputsManager);
+        gamepadFocusManager = new(this, ContentFrame, settingsManager, controllerManager, uISounds, inputsManager);
 
         hwndSource = PresentationSource.FromVisual(this) as HwndSource;
         hwndSource.AddHook(WndProc);
@@ -443,7 +460,7 @@ public partial class OverlayQuickTools : GamepadWindow
         else
         {
             // close pages
-            devicePage.Close();
+            quickDevicePage.Value.Close();
         }
     }
 

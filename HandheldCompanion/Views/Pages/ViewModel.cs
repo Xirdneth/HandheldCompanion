@@ -7,7 +7,7 @@ using System.Windows.Input;
 
 namespace HandheldCompanion.Views.Pages
 {
-    public class ViewModel : INotifyPropertyChanged
+    public class ViewModel : INotifyPropertyChanged, IViewModel
     {
         private double _xPointer;
         private double _yPointer;

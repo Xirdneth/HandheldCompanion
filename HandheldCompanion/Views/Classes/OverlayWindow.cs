@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -16,9 +17,12 @@ public class OverlayWindow : Window
 
     private const int WM_MOUSEACTIVATE = 0x0021;
     private const int MA_NOACTIVATE = 0x0003;
+    private readonly Lazy<IHotkeysManager> hotkeysManager;
 
     public OverlayWindow(Lazy<IHotkeysManager> hotkeysManager)
     {
+        this.hotkeysManager = hotkeysManager;
+
         // overlay specific settings
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
@@ -34,7 +38,7 @@ public class OverlayWindow : Window
 
         Loaded += OverlayWindow_Loaded;
         IsVisibleChanged += OverlayWindow_IsVisibleChanged;
-        this.hotkeysManager = hotkeysManager;
+
     }
 
     private void OverlayWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -157,7 +161,6 @@ public class OverlayWindow : Window
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_NOACTIVATE = 0x08000000;
-    private readonly Lazy<IHotkeysManager> hotkeysManager;
 
     [DllImport("user32.dll")]
     public static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);

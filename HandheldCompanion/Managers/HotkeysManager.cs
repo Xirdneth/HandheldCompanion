@@ -1,6 +1,7 @@
 ﻿using GregsStack.InputSimulatorStandard.Native;
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Properties;
 using HandheldCompanion.Simulators;

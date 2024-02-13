@@ -4,9 +4,11 @@ using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Pages.Interfaces;
 using HandheldCompanion.Views.Pages.Profiles;
 using iNKORE.UI.WPF.Modern.Controls;
 using Microsoft.Win32;
@@ -49,6 +51,7 @@ public partial class ProfilesPage : Page, IProfilesPage
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<ITimerManager> timerManager;
     private readonly IILayoutPage layoutPage;
+    private readonly IPerformancePage performancePage;
     private LockObject updateLock = new();
 
     private const int UpdateInterval = 500;
@@ -67,7 +70,8 @@ public partial class ProfilesPage : Page, IProfilesPage
         Lazy<IInputsManager> inputsManager,
         Lazy<IControllerManager> controllerManager,
         Lazy<ITimerManager> timerManager,
-        IILayoutPage layoutPage)
+        IILayoutPage layoutPage,
+        IPerformancePage performancePage)
     {
         this.profileManager = profileManager;
         this.powerProfileManager = powerProfileManager;
@@ -82,6 +86,7 @@ public partial class ProfilesPage : Page, IProfilesPage
         this.controllerManager = controllerManager;
         this.timerManager = timerManager;
         this.layoutPage = layoutPage;
+        this.performancePage = performancePage;
         InitializeComponent();
 
     }
@@ -506,7 +511,7 @@ public partial class ProfilesPage : Page, IProfilesPage
         if (radioButton.IsMouseOver)
             return;
 
-        MainWindow.performancePage.SelectionChanged(powerProfile.Guid);
+        performancePage.SelectionChanged(powerProfile.Guid);
         MainWindow.GetCurrent().NavView_Navigate("PerformancePage");
     }
 

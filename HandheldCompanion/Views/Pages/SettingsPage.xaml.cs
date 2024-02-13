@@ -2,8 +2,10 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern;
 using iNKORE.UI.WPF.Modern.Controls;
 using iNKORE.UI.WPF.Modern.Controls.Helpers;
@@ -25,27 +27,39 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for SettingsPage.xaml
 /// </summary>
-public partial class SettingsPage : Page
+public partial class SettingsPage : Page, ISettingsPage
 {
     private readonly Lazy<ISettingsManager> settingsManager;
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<IPlatformManager> platformManager;
     private readonly Lazy<IMultimediaManager> multimediaManager;
     private readonly Lazy<IUpdateManager> updateManager;
+    private readonly Lazy<IOverlayQuickTools> overlayQuickTools;
 
     public SettingsPage(
-        Lazy<ISettingsManager> settingsManager, 
+        Lazy<ISettingsManager> settingsManager,
         Lazy<IControllerManager> controllerManager,
         Lazy<IPlatformManager> platformManager,
         Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IUpdateManager> updateManager)
+        Lazy<IUpdateManager> updateManager,
+        Lazy<IOverlayQuickTools> overlayQuickTools)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.controllerManager = controllerManager;
         this.platformManager = platformManager;
         this.multimediaManager = multimediaManager;
         this.updateManager = updateManager;
+        this.overlayQuickTools = overlayQuickTools;
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void Init()
+    {
         // initialize components
         cB_Language.Items.Add(new CultureInfo("en-US"));
         cB_Language.Items.Add(new CultureInfo("fr-FR"));
@@ -71,16 +85,6 @@ public partial class SettingsPage : Page
         // force call
         // todo: make PlatformManager static
         RTSS_Updated(platformManager.Value.RTSS.Status);
-    }
-
-    public SettingsPage(string? Tag,
-        Lazy<ISettingsManager> settingsManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<IPlatformManager> platformManager,
-        Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IUpdateManager> updateManager) : this(settingsManager, controllerManager, platformManager, multimediaManager, updateManager)
-    {
-        this.Tag = Tag;
     }
 
     private void ControllerManager_ControllerSelected(IController Controller)
@@ -449,11 +453,11 @@ public partial class SettingsPage : Page
         ElementTheme theme = (ElementTheme)cB_Theme.SelectedIndex;
         MainWindow mainWindow = MainWindow.GetCurrent();
         ThemeManager.SetRequestedTheme(mainWindow, theme);
-        ThemeManager.SetRequestedTheme(MainWindow.overlayquickTools, theme);
+        ThemeManager.SetRequestedTheme((Window)overlayQuickTools.Value, theme);
 
         // update default style
         MainWindow.GetCurrent().UpdateDefaultStyle();
-        MainWindow.overlayquickTools.UpdateDefaultStyle();
+        overlayQuickTools.Value.UpdateDefaultStyle();
 
         if (!IsLoaded)
             return;
@@ -466,7 +470,7 @@ public partial class SettingsPage : Page
         if (cB_QuickToolsBackdrop.SelectedIndex == -1)
             return;
 
-        var targetWindow = MainWindow.overlayquickTools;
+        var targetWindow = (Window)overlayQuickTools.Value;
         SwitchBackdrop(targetWindow, cB_QuickToolsBackdrop.SelectedIndex);
 
         if (!IsLoaded)

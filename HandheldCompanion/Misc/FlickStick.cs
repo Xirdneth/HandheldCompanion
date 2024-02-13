@@ -1,4 +1,4 @@
-﻿using HandheldCompanion.Managers;
+﻿using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using System;
 using System.Numerics;

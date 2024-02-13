@@ -1,5 +1,5 @@
 ﻿using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using System;
 using static JSL;

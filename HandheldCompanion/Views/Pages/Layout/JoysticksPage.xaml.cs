@@ -1,7 +1,7 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -11,7 +11,7 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for JoysticksPage.xaml
 /// </summary>
-public partial class JoysticksPage : ILayoutPage
+public partial class JoysticksPage : ILayoutPage, IJoysticksPage
 {
     public static List<ButtonFlags> LeftThumbButtons = new()
     {
@@ -31,12 +31,18 @@ public partial class JoysticksPage : ILayoutPage
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<ITimerManager> timerManager;
 
-    public JoysticksPage(Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager)
+    public Dictionary<ButtonFlags, ButtonStack> ButtonStacks {get => base.ButtonStacks; set => base.ButtonStacks = value; }
+    public Dictionary<AxisLayoutFlags, AxisMapping> AxisMappings { get => base.AxisMappings; set => base.AxisMappings = value; }
+
+    public JoysticksPage(Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager)
     {
-        InitializeComponent();
         this.controllerManager = controllerManager;
         this.timerManager = timerManager;
+        InitializeComponent();
+    }
 
+    public void Init()
+    {
         // draw UI
         foreach (ButtonFlags button in LeftThumbButtons)
         {
@@ -64,13 +70,12 @@ public partial class JoysticksPage : ILayoutPage
 
         foreach (AxisLayoutFlags axis in RightThumbAxis)
         {
-            AxisMapping axisMapping = new AxisMapping(axis,controllerManager, timerManager);
+            AxisMapping axisMapping = new AxisMapping(axis, controllerManager, timerManager);
             RightJoystickPanel.Children.Add(axisMapping);
 
             AxisMappings.Add(axis, axisMapping);
         }
     }
-
     public override void UpdateController(IController controller)
     {
         base.UpdateController(controller);
@@ -85,7 +90,7 @@ public partial class JoysticksPage : ILayoutPage
     }
 
     public JoysticksPage(string Tag,
-        Lazy<IControllerManager> controllerManager,Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
+        Lazy<IControllerManager> controllerManager, Lazy<ITimerManager> timerManager) : this(controllerManager, timerManager)
     {
         this.Tag = Tag;
     }

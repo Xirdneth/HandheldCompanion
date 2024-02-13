@@ -1,7 +1,7 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;

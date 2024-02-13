@@ -1,5 +1,6 @@
 ﻿using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;

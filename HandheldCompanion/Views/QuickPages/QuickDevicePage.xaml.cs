@@ -1,7 +1,8 @@
 ﻿using HandheldCompanion.Devices;
-using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
+using HandheldCompanion.Views.QuickPages.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace HandheldCompanion.Views.QuickPages;
 /// <summary>
 ///     Interaction logic for QuickDevicePage.xaml
 /// </summary>
-public partial class QuickDevicePage : Page
+public partial class QuickDevicePage : Page, IQuickDevicePage
 {
     private IReadOnlyList<Radio> radios;
     private Timer radioTimer;
@@ -32,10 +33,19 @@ public partial class QuickDevicePage : Page
         Lazy<IProfileManager> profileManager,
         Lazy<IMultimediaManager> multimediaManager)
     {
-        InitializeComponent();
         this.settingsManager = settingsManager;
         this.profileManager = profileManager;
         this.multimediaManager = multimediaManager;
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void Init()
+    {
         multimediaManager.Value.PrimaryScreenChanged += DesktopManager_PrimaryScreenChanged;
         multimediaManager.Value.DisplaySettingsChanged += DesktopManager_DisplaySettingsChanged;
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -54,15 +64,6 @@ public partial class QuickDevicePage : Page
         radioTimer = new(1000);
         radioTimer.Elapsed += RadioTimer_Elapsed;
         radioTimer.Start();
-       
-    }
-
-    public QuickDevicePage(string Tag,
-        Lazy<ISettingsManager> settingsManager,
-        Lazy<IProfileManager> profileManager,
-        Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, profileManager, multimediaManager)
-    {
-        this.Tag = Tag;
     }
 
     private void ProfileManager_Applied(Profile profile, UpdateSource source)
@@ -272,7 +273,7 @@ public partial class QuickDevicePage : Page
         settingsManager.Value.SetProperty("LEDSettingsEnabled", UseDynamicLightingToggle.IsOn);
     }
 
-    internal void Close()
+    public void Close()
     {
         radioTimer.Stop();
     }

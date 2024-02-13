@@ -3,6 +3,7 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Devices.Lenovo;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HidLibrary;
 using Nefarius.Utilities.DeviceManagement.PnP;

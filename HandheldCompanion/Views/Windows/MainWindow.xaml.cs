@@ -3,13 +3,16 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
 using HandheldCompanion.Views.Pages;
-using HandheldCompanion.Views.Windows;
+using HandheldCompanion.Views.Pages.Interfaces;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
+using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -45,27 +48,21 @@ public partial class MainWindow : GamepadWindow
 
     // page vars
     private static readonly Dictionary<string, Page> _pages = new();
-
-    //public static ControllerPage controllerPage;
-    public static DevicePage devicePage;
-    public static PerformancePage performancePage;
-    //public static ProfilesPage profilesPage;
-    public static SettingsPage settingsPage;
-    public static AboutPage aboutPage;
-    //public static OverlayPage overlayPage;
-    public static HotkeysPage hotkeysPage;
-    //public static LayoutPage layoutPage;
-    public static NotificationsPage notificationsPage;
-
-    // overlay(s) vars
-    //public static OverlayModel overlayModel;
-    private readonly IOverlayModel _overlayModel;
-    private readonly IOverlayPage overlayPage;
+    private readonly Lazy<IOverlayPage> overlayPage;
     private readonly Lazy<IILayoutPage> layoutPage;
-    private readonly IProfilesPage profilesPage;
-    private readonly IControllerPage controllerPage;
-    public static OverlayTrackpad overlayTrackpad;
-    public static OverlayQuickTools overlayquickTools;
+    private readonly Lazy<IProfilesPage> profilesPage;
+    private readonly Lazy<IControllerPage> controllerPage;
+    private readonly Lazy<INotificationsPage> notificationsPage;
+    private readonly Lazy<IHotkeysPage> hotkeysPage;
+    private readonly Lazy<IAboutPage> aboutPage;
+    private readonly Lazy<IDevicePage> devicePage;
+    private readonly Lazy<ISettingsPage> settingsPage;
+    private readonly Lazy<IPerformancePage> performancePage;
+
+    //Window vars
+    private readonly Lazy<IOverlayQuickTools> overlayQuickTools;
+    private readonly Lazy<IOverlayTrackpad> overlayTrackpad;
+    private readonly Lazy<IOverlayModel> overlayModel;
 
     public static string CurrentExe, CurrentPath;
 
@@ -144,13 +141,21 @@ public partial class MainWindow : GamepadWindow
         Lazy<ISystemManager> systemManager,
         Lazy<IToastManager> toastManager,
         Lazy<ITimerManager> timerManager,
-        IOverlayModel overlayModel,
-        IOverlayPage overlayPage,
+        Lazy<IOverlayModel> overlayModel,
+        Lazy<IOverlayPage> overlayPage,
         Lazy<IILayoutPage> layoutPage,
-        IProfilesPage profilesPage,
-        IControllerPage controllerPage
-        )//Lazy<ILayoutTemplate> layoutTemplate
+        Lazy<IProfilesPage> profilesPage,
+        Lazy<IControllerPage> controllerPage,
+        Lazy<INotificationsPage> notificationsPage,
+        Lazy<IHotkeysPage> hotkeysPage,
+        Lazy<IAboutPage> aboutPage,
+        Lazy<IDevicePage> devicePage,
+        Lazy<ISettingsPage> settingsPage,
+        Lazy<IPerformancePage> performancePage,
+        Lazy<IOverlayQuickTools> overlayQuickTools,
+        Lazy<IOverlayTrackpad> overlayTrackpad)
     {
+        var MainWindowStartup = Stopwatch.StartNew();
         this.gPUManager = gPUManager;
         this.powerProfileManager = powerProfileManager;
         this.profileManager = profileManager;
@@ -177,12 +182,25 @@ public partial class MainWindow : GamepadWindow
         this.systemManager = systemManager;
         this.toastManager = toastManager;
         this.timerManager = timerManager;
-        this._overlayModel = overlayModel;
+        
+
+        //Pages
         this.overlayPage = overlayPage;
         this.layoutPage = layoutPage;
         this.profilesPage = profilesPage;
         this.controllerPage = controllerPage;
-        this.layoutTemplate = layoutTemplate;
+        this.notificationsPage = notificationsPage;
+        this.hotkeysPage = hotkeysPage;
+        this.aboutPage = aboutPage;
+        this.devicePage = devicePage;
+        this.settingsPage = settingsPage;
+        this.performancePage = performancePage;
+
+
+        //Windows
+        this.overlayQuickTools = overlayQuickTools;
+        this.overlayTrackpad = overlayTrackpad;
+        this.overlayModel = overlayModel;
 
         InitializeComponent();
 
@@ -297,11 +315,18 @@ public partial class MainWindow : GamepadWindow
         // initialize UI sounds board
         var Sounds = uISounds.Value;
 
+
+        var WindowLoadWatch = Stopwatch.StartNew();
         // load window(s)
         loadWindows();
+        WindowLoadWatch.Stop();
+        LogManager.LogInformation($"LoadWindows time Elapsed: {WindowLoadWatch.ElapsedMilliseconds}ms");
 
-        //// load page(s)
+        var PagesLoadWatch = Stopwatch.StartNew();
+        // load page(s)
         loadPages();
+        PagesLoadWatch.Stop();
+        LogManager.LogInformation($"LoadPages time Elapsed: {PagesLoadWatch.ElapsedMilliseconds}ms");
 
         // manage events
         inputsManager.Value.TriggerRaised += InputsManager_TriggerRaised;
@@ -348,7 +373,8 @@ public partial class MainWindow : GamepadWindow
         Left = Math.Min(SystemParameters.PrimaryScreenWidth - MinWidth, settingsManager.Value.GetDouble("MainWindowLeft"));
         Top = Math.Min(SystemParameters.PrimaryScreenHeight - MinHeight, settingsManager.Value.GetDouble("MainWindowTop"));
         navView.IsPaneOpen = settingsManager.Value.GetBoolean("MainWindowIsPaneOpen");
-        
+        MainWindowStartup.Stop();
+        LogManager.LogInformation($"MainWindow Startup time Elapsed: {MainWindowStartup.ElapsedMilliseconds}ms");
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -495,80 +521,68 @@ public partial class MainWindow : GamepadWindow
 
     private void loadPages()
     {
-        // initialize pages
-        controllerPage.SetTag("controller");
-        controllerPage.ControllerPageLoaded += ControllerPage_Loaded;
-        controllerPage.Init();
-       
+        //1. controller page
+        controllerPage.Value.SetTag("controller");
+        controllerPage.Value.ControllerPageLoaded += ControllerPage_Loaded;
+        controllerPage.Value.Init();
+        _pages.Add("ControllerPage", (Page)controllerPage.Value);
 
-        devicePage = new DevicePage("device",
-            settingsManager);
-        performancePage = new PerformancePage("performance",
-            settingsManager,
-            powerProfileManager,
-            performanceManager,
-            platformManager,
-            multimediaManager);
+        //2. device page
+        devicePage.Value.SetTag("device");
+        devicePage.Value.Init();
+        _pages.Add("DevicePage", (Page)devicePage.Value);
 
-        profilesPage.SetTag("profiles");
-        profilesPage.Init();
+        //3. performance page
+        performancePage.Value.SetTag("performance");
+        performancePage.Value.Init();
+        _pages.Add("PerformancePage", (Page)performancePage.Value);
 
-        settingsPage = new SettingsPage("settings",
-            settingsManager,
-            controllerManager,
-            platformManager,
-            multimediaManager,
-            updateManager);
-        aboutPage = new AboutPage("about");
-        overlayPage.SetTag("overlay");
-        overlayPage.Init();
+        //4. profiles page
+        profilesPage.Value.SetTag("profiles");
+        profilesPage.Value.Init();
+        _pages.Add("ProfilesPage", (Page)profilesPage.Value);
 
-        hotkeysPage = new HotkeysPage("hotkeys",
-            hotkeysManager);
+        //5. settings page
+        settingsPage.Value.SetTag("settings");
+        settingsPage.Value.Init();
+        _pages.Add("SettingsPage", (Page)settingsPage.Value);
 
+        //6. about page
+        aboutPage.Value.SetTag("about");
+        aboutPage.Value.Init();
+        _pages.Add("AboutPage", (Page)aboutPage.Value);
+
+        //7. overlay page
+        overlayPage.Value.SetTag("overlay");
+        overlayPage.Value.Init();
+        _pages.Add("OverlayPage", (Page)overlayPage.Value);
+
+        //8. hotkeys page
+        hotkeysPage.Value.SetTag("hotkeys");
+        hotkeysPage.Value.Init();
+        _pages.Add("HotkeysPage", (Page)hotkeysPage.Value);
+
+        //9. layout page
         layoutPage.Value.SetTag("layout");
         layoutPage.Value.SetParentNavView(navView);
         layoutPage.Value.Init();
-        notificationsPage = new NotificationsPage("notifications");
-        notificationsPage.StatusChanged += NotificationsPage_LayoutUpdated;
-
-        // store pages
-        _pages.Add("ControllerPage", (Page)controllerPage);
-        _pages.Add("DevicePage", devicePage);
-        _pages.Add("PerformancePage", performancePage);
-        _pages.Add("ProfilesPage", (Page)profilesPage);
-        _pages.Add("AboutPage", aboutPage);
-        _pages.Add("OverlayPage", (Page)overlayPage);
-        _pages.Add("SettingsPage", settingsPage);
-        _pages.Add("HotkeysPage", hotkeysPage);
         _pages.Add("LayoutPage", (Page)layoutPage.Value);
-        _pages.Add("NotificationsPage", notificationsPage);
+
+        //10. notifications page
+        notificationsPage.Value.SetTag("notifications");
+        notificationsPage.Value.Init();
+        notificationsPage.Value.StatusChanged += NotificationsPage_LayoutUpdated;
+        _pages.Add("NotificationsPage", (Page)notificationsPage.Value);
     }
 
     private void loadWindows()
     {
         // initialize overlay
-        _overlayModel.Init();
+        overlayModel.Value.Init();
 
-        overlayTrackpad = new OverlayTrackpad(
-            settingsManager,
-            controllerManager,
-            hotkeysManager);
-        overlayquickTools = new OverlayQuickTools(
-            settingsManager,
-            hotkeysManager,
-            multimediaManager,
-            profileManager,
-            platformManager,
-            powerProfileManager,
-            gPUManager,
-            performanceManager,
-            controllerManager,
-            uISounds,
-            systemManager,
-            inputsManager,
-            processManager,
-            timerManager);
+        overlayTrackpad.Value.Init();
+
+        overlayQuickTools.Value.Init();
     }
 
     private void GenericDeviceUpdated(PnPDevice device, DeviceEventArgs obj)
@@ -576,8 +590,8 @@ public partial class MainWindow : GamepadWindow
         // todo: improve me
         CurrentDevice.PullSensors();
 
-        aboutPage.UpdateDevice(device);
-        settingsPage.UpdateDevice(device);
+        aboutPage.Value.UpdateDevice(device);
+        settingsPage.Value.UpdateDevice(device);
     }
 
     private void InputsManager_TriggerRaised(string listener, InputsChord input, InputsHotkeyType type, bool IsKeyDown,
@@ -586,13 +600,13 @@ public partial class MainWindow : GamepadWindow
         switch (listener)
         {
             case "quickTools":
-                overlayquickTools.ToggleVisibility();
+                overlayQuickTools.Value.ToggleVisibility();
                 break;
             case "overlayGamepad":
-                _overlayModel.ToggleVisibility();
+                overlayModel.Value.ToggleVisibility();
                 break;
             case "overlayTrackpads":
-                overlayTrackpad.ToggleVisibility();
+                overlayTrackpad.Value.ToggleVisibility();
                 break;
             case "shortcutMainwindow":
                 SwapWindowState();
@@ -608,7 +622,7 @@ public partial class MainWindow : GamepadWindow
                 SwapWindowState();
                 break;
             case "QuickTools":
-                overlayquickTools.ToggleVisibility();
+                overlayQuickTools.Value.ToggleVisibility();
                 break;
             case "Exit":
                 appClosing = true;
@@ -663,7 +677,7 @@ public partial class MainWindow : GamepadWindow
     {
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            _overlayModel.UpdateHIDMode(HIDmode);
+            overlayModel.Value.UpdateHIDMode(HIDmode);
         });
         CurrentDevice.SetKeyPressDelay(HIDmode);
     }
@@ -802,9 +816,9 @@ public partial class MainWindow : GamepadWindow
         notifyIcon.Visible = false;
         notifyIcon.Dispose();
 
-        _overlayModel.Close();
-        overlayTrackpad.Close();
-        overlayquickTools.Close(true);
+        overlayModel.Value.Close();
+        overlayTrackpad.Value.Close();
+        overlayQuickTools.Value.Close(true);
 
         virtualManager.Value.Stop();
         multimediaManager.Value.Stop();
@@ -827,13 +841,13 @@ public partial class MainWindow : GamepadWindow
         updateManager.Value.Stop();
 
         // closing page(s)
-        controllerPage.Page_Closed();
-        profilesPage.Page_Closed();
-        settingsPage.Page_Closed();
-        overlayPage.Page_Closed();
-        hotkeysPage.Page_Closed();
+        controllerPage.Value.Page_Closed();
+        profilesPage.Value.Page_Closed();
+        settingsPage.Value.Page_Closed();
+        overlayPage.Value.Page_Closed();
+        hotkeysPage.Value.Page_Closed();
         layoutPage.Value.Page_Closed();
-        notificationsPage.Page_Closed();
+        notificationsPage.Value.Page_Closed();
 
         // force kill application
         Environment.Exit(0);

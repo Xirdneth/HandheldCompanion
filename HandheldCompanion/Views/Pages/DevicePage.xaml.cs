@@ -2,7 +2,7 @@
 using ColorPicker.Models;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Devices.Lenovo;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -18,7 +18,7 @@ namespace HandheldCompanion.Views.Pages
     /// <summary>
     /// Interaction logic for DevicePage.xaml
     /// </summary>
-    public partial class DevicePage : Page
+    public partial class DevicePage : Page, IDevicePage
     {
         private Color prevMainColor = new();
         private Color prevSecondColor = new();
@@ -26,8 +26,17 @@ namespace HandheldCompanion.Views.Pages
 
         public DevicePage(Lazy<ISettingsManager> settingsManager)
         {
+            this.settingsManager = settingsManager;
             InitializeComponent();
+        }
 
+        public void SetTag(string Tag)
+        {
+            this.Tag = Tag;
+        }
+
+        public void Init()
+        {
             // Adjust UI element availability based on device capabilities
             DynamicLightingPanel.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.DynamicLighting);
             LEDBrightness.Visibility = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.DynamicLightingBrightness) ? Visibility.Visible : Visibility.Collapsed;
@@ -40,13 +49,6 @@ namespace HandheldCompanion.Views.Pages
             SetControlEnabledAndVisible(LEDWheel, LEDLevel.Wheel);
             SetControlEnabledAndVisible(LEDGradient, LEDLevel.Gradient);
             SetControlEnabledAndVisible(LEDAmbilight, LEDLevel.Ambilight);
-            this.settingsManager = settingsManager;
-        }
-
-        public DevicePage(string? Tag, Lazy<ISettingsManager> settingsManager) : this(settingsManager)
-        {
-            this.Tag = Tag;
-
             settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
             MainWindow.uiSettings.ColorValuesChanged += OnColorValuesChanged;
         }
@@ -276,7 +278,7 @@ namespace HandheldCompanion.Views.Pages
 
             settingsManager.Value.SetProperty("LEDMainColor", prevMainColor.ToString());
         }
-        
+
         private void SecondColorPicker_ColorChanged(object sender, RoutedEventArgs e)
         {
             // workaround: NotifyableColor is raising ColorChanged event infinitely
@@ -365,7 +367,7 @@ namespace HandheldCompanion.Views.Pages
             if (!IsLoaded)
                 return;
 
-            SapientiaUsb.SetStickCustomDeadzone(LegionGo.LeftJoyconIndex, (int) value - 1);
+            SapientiaUsb.SetStickCustomDeadzone(LegionGo.LeftJoyconIndex, (int)value - 1);
         }
 
         private void SliderLeftAutoSleepTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

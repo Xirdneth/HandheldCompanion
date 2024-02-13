@@ -1,4 +1,5 @@
-﻿using HandheldCompanion.Processors;
+﻿using HandheldCompanion.Managers.Interfaces;
+using HandheldCompanion.Processors;
 using HandheldCompanion.Views;
 using System;
 using System.Collections.Generic;

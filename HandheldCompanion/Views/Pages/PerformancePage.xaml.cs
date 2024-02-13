@@ -1,6 +1,7 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Processors;
 using HandheldCompanion.Utils;
@@ -11,6 +12,7 @@ using LiveCharts.Helpers;
 using LiveCharts.Wpf;
 using System;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Timers;
 using System.Windows;
@@ -23,7 +25,7 @@ namespace HandheldCompanion.Views.Pages
     /// <summary>
     /// Interaction logic for PerformancePage.xaml
     /// </summary>
-    public partial class PerformancePage : Page
+    public partial class PerformancePage : Page, IPerformancePage
     {
         private ChartPoint storedChartPoint;
         private PowerProfile selectedProfile;
@@ -43,30 +45,31 @@ namespace HandheldCompanion.Views.Pages
             Lazy<IPowerProfileManager> powerProfileManager,
             Lazy<IPerformanceManager> performanceManager,
             Lazy<IPlatformManager> platformManager,
-            Lazy<IMultimediaManager> multimediaManager)
+            Lazy<IMultimediaManager> multimediaManager,
+            IViewModel viewModel)
         {
-            InitializeComponent();
             this.settingsManager = settingsManager;
             this.powerProfileManager = powerProfileManager;
             this.performanceManager = performanceManager;
             this.platformManager = platformManager;
             this.multimediaManager = multimediaManager;
-            DataContext = new ViewModel();
+            DataContext = (ViewModel)viewModel;
+
+            InitializeComponent();
+        }
+
+        public void SetTag(string Tag)
+        {
+            this.Tag = Tag;
+        }
+
+        public void Init()
+        {
             lvLineSeries.ActualValues.CollectionChanged += ActualValues_CollectionChanged;
 
             UpdateTimer = new Timer(UpdateInterval);
             UpdateTimer.AutoReset = false;
             UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
-        }
-
-        public PerformancePage(string? Tag,
-            Lazy<ISettingsManager> settingsManager,
-            Lazy<IPowerProfileManager> powerProfileManager,
-            Lazy<IPerformanceManager> performanceManager,
-             Lazy<IPlatformManager> platformManager,
-             Lazy<IMultimediaManager> multimediaManager) : this(settingsManager, powerProfileManager, performanceManager, platformManager, multimediaManager)
-        {
-            this.Tag = Tag;
 
             // manage events
             settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
@@ -88,6 +91,7 @@ namespace HandheldCompanion.Views.Pages
             CPUCoreSlider.Maximum = MotherboardInfo.NumberOfCores;
 
             FanModeSoftware.IsEnabled = MainWindow.CurrentDevice.Capabilities.HasFlag(DeviceCapabilities.FanControl);
+
         }
 
         private void Page_Loaded(object? sender, RoutedEventArgs? e)

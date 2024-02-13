@@ -1,5 +1,8 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.QuickPages.Interfaces;
+using HandheldCompanion.Views.Windows.Interfaces;
 using System;
 using System.Linq;
 using System.Windows;
@@ -11,7 +14,7 @@ namespace HandheldCompanion.Views.QuickPages;
 /// <summary>
 ///     Interaction logic for QuickHomePage.xaml
 /// </summary>
-public partial class QuickHomePage : Page
+public partial class QuickHomePage : Page, IQuickHomePage
 {
     private LockObject brightnessLock = new();
     private LockObject volumeLock = new();
@@ -19,15 +22,30 @@ public partial class QuickHomePage : Page
     private readonly Lazy<IHotkeysManager> hotkeysManager;
     private readonly Lazy<IMultimediaManager> multimediaManager;
     private readonly Lazy<IProfileManager> profileManager;
+    private readonly Lazy<IOverlayQuickTools> overlayQuickTools;
 
-    public QuickHomePage(string Tag,
+    public QuickHomePage(
         Lazy<ISettingsManager> settingsManager,
         Lazy<IHotkeysManager> hotkeysManager,
         Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IProfileManager> profileManager) : this(settingsManager, hotkeysManager, multimediaManager, profileManager)
+        Lazy<IProfileManager> profileManager,
+        Lazy<IOverlayQuickTools> overlayQuickTools)
+    {
+        this.settingsManager = settingsManager;
+        this.hotkeysManager = hotkeysManager;
+        this.multimediaManager = multimediaManager;
+        this.profileManager = profileManager;
+        this.overlayQuickTools = overlayQuickTools;
+        InitializeComponent();
+    }
+
+    public void SetTag(string Tag)
     {
         this.Tag = Tag;
+    }
 
+    public void Init()
+    {
         hotkeysManager.Value.HotkeyCreated += HotkeysManager_HotkeyCreated;
         hotkeysManager.Value.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
 
@@ -37,19 +55,6 @@ public partial class QuickHomePage : Page
 
         profileManager.Value.Applied += ProfileManager_Applied;
         settingsManager.Value.SettingValueChanged += SettingsManager_SettingValueChanged;
-    }
-
-    public QuickHomePage(
-        Lazy<ISettingsManager> settingsManager, 
-        Lazy<IHotkeysManager> hotkeysManager, 
-        Lazy<IMultimediaManager> multimediaManager, 
-        Lazy<IProfileManager> profileManager)
-    {
-        InitializeComponent();
-        this.settingsManager = settingsManager;
-        this.hotkeysManager = hotkeysManager;
-        this.multimediaManager = multimediaManager;
-        this.profileManager = profileManager;
     }
 
     private void HotkeysManager_HotkeyUpdated(Hotkey hotkey)
@@ -74,7 +79,7 @@ public partial class QuickHomePage : Page
     private void QuickButton_Click(object sender, RoutedEventArgs e)
     {
         Button button = (Button)sender;
-        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+        overlayQuickTools.Value.NavView_Navigate(button.Name);
     }
 
     private void SystemManager_Initialized()
@@ -129,7 +134,7 @@ public partial class QuickHomePage : Page
         if (brightnessLock)
             return;
 
-       multimediaManager.Value.SetBrightness(SliderBrightness.Value);
+        multimediaManager.Value.SetBrightness(SliderBrightness.Value);
     }
 
     private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

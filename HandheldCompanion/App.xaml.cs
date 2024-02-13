@@ -5,6 +5,7 @@ using HandheldCompanion.Controls;
 using HandheldCompanion.Devices;
 using HandheldCompanion.Helpers;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Processors;
@@ -12,7 +13,11 @@ using HandheldCompanion.UI;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using HandheldCompanion.Views.Pages;
+using HandheldCompanion.Views.Pages.Interfaces;
+using HandheldCompanion.Views.QuickPages;
+using HandheldCompanion.Views.QuickPages.Interfaces;
 using HandheldCompanion.Views.Windows;
+using HandheldCompanion.Views.Windows.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -26,6 +31,7 @@ using System.Reflection;
 using System.Threading;
 using System.Windows;
 using static HandheldCompanion.WinAPI;
+using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
 
 namespace HandheldCompanion;
 
@@ -63,6 +69,7 @@ public partial class App : Application
             })
             .ConfigureServices((context, services) =>
             {
+                //Managers
                 services.AddSingleton<MainWindow>();               
                 services.AddLazyScoped<IGPUManager,GPUManager>();
                 services.AddLazyScoped<IPowerProfileManager, PowerProfileManager>();
@@ -88,24 +95,45 @@ public partial class App : Application
                 services.AddLazyScoped<ITimerManager, TimerManager>();
                 services.AddLazyScoped<IHotkeysManager, HotkeysManager>();
 
+                //Models
                 services.AddLazySingleton<IRTSS, RTSS>();
                 services.AddLazySingleton<IXInputPlus, XInputPlus>();
                 services.AddLazySingleton<IUISounds, UISounds>();
                 services.AddLazySingleton<IPowerProfile, PowerProfile>();
                 services.AddLazySingleton<IIDevice, IDevice>();
                 services.AddLazySingleton<ILegionGo, LegionGo>();
-                //services.AddLazySingleton<IIActions, IActions>();
                 services.AddLazySingleton<IXInputController, XInputController>();
                 services.AddLazySingleton<IVangoghGPU, VangoghGPU>();
                 services.AddSingleton<IProcessor, Processor>();
 
-                services.AddSingleton<IOverlayModel, OverlayModel>();
-                services.AddSingleton<IOverlayPage, OverlayPage>();
-                services.AddLazySingleton<IILayoutPage, LayoutPage>();
-                services.AddSingleton<IProfilesPage, ProfilesPage>();
-                services.AddSingleton<IControllerPage, ControllerPage>();
+                //Windows
+                services.AddSingleton<IViewModel, ViewModel>();
+                services.AddLazySingleton<IOverlayModel, OverlayModel>();
+                services.AddLazySingleton<IOverlayQuickTools, OverlayQuickTools>();
+                services.AddLazySingleton<IOverlayTrackpad, OverlayTrackpad>();
 
-                //services.AddLazySingleton<ILayoutTemplate, LayoutTemplate>();
+                //Pages
+                services.AddLazySingleton<IOverlayPage, OverlayPage>();
+                services.AddLazySingleton<IILayoutPage, LayoutPage>();
+                services.AddLazySingleton<IProfilesPage, ProfilesPage>();
+                services.AddLazySingleton<IControllerPage, ControllerPage>();
+                services.AddLazySingleton<INotificationsPage, NotificationsPage>();
+                services.AddLazySingleton<IHotkeysPage, HotkeysPage>();
+                services.AddLazySingleton<IAboutPage, AboutPage>();
+                services.AddLazySingleton<IDevicePage, DevicePage>();
+                services.AddLazySingleton<ISettingsPage, SettingsPage>();
+                services.AddLazySingleton<IPerformancePage, PerformancePage>();
+
+                //Quick Pages
+                services.AddLazySingleton<IQuickHomePage, QuickHomePage>();
+                services.AddLazySingleton<IQuickDevicePage, QuickDevicePage>();
+                services.AddLazySingleton<IQuickPerformancePage, QuickPerformancePage>();
+                services.AddLazySingleton<IQuickProfilesPage, QuickProfilesPage>();
+                services.AddLazySingleton<IQuickOverlayPage, QuickOverlayPage>();
+                services.AddLazySingleton<IQuickSuspenderPage, QuickSuspenderPage>();
+
+                //Sub Pages 
+                services.AddLazySingleton<IJoysticksPage, JoysticksPage>();
 
                 services.AddLogging();
             })

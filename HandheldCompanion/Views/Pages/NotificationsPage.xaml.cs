@@ -1,6 +1,9 @@
 ﻿using HandheldCompanion.Controls.Hints;
+using HandheldCompanion.Managers;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Timers;
 using System.Windows;
@@ -11,7 +14,7 @@ namespace HandheldCompanion.Views.Pages
     /// <summary>
     /// Interaction logic for NotificationsPage.xaml
     /// </summary>
-    public partial class NotificationsPage : Page
+    public partial class NotificationsPage : Page, INotificationsPage
     {
         public delegate void StatusChangedEventHandler(int status);
         public event StatusChangedEventHandler StatusChanged;
@@ -24,10 +27,13 @@ namespace HandheldCompanion.Views.Pages
             InitializeComponent();
         }
 
-        public NotificationsPage(string Tag) : this()
+        public void SetTag(string Tag)
         {
             this.Tag = Tag;
+        }
 
+        public void Init()
+        {
             timer = new(1000);
             timer.Elapsed += Timer_Elapsed;
         }
@@ -59,7 +65,7 @@ namespace HandheldCompanion.Views.Pages
             Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 IEnumerable<IHint> notifications = Notifications.Children.OfType<IHint>();
-                foreach(IHint hint in notifications)
+                foreach (IHint hint in notifications)
                     hint.Stop();
             });
         }

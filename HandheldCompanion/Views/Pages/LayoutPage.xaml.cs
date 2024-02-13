@@ -3,12 +3,15 @@ using HandheldCompanion.Controllers;
 using HandheldCompanion.Controls;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Pages.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using Nefarius.Utilities.DeviceManagement.PnP;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +34,7 @@ public partial class LayoutPage : Page, IILayoutPage
     private ButtonsPage buttonsPage { get; set; }
     private DpadPage dpadPage { get; set; }
     private GyroPage gyroPage { get; set; }
-    private JoysticksPage joysticksPage { get; set; }
+    //private JoysticksPage joysticksPage { get; set; }
     private TrackpadsPage trackpadsPage { get; set; }
     private TriggersPage triggersPage { get; set; }
     private readonly Lazy<ISettingsManager> settingsManager;
@@ -43,6 +46,7 @@ public partial class LayoutPage : Page, IILayoutPage
     private readonly Lazy<IHotkeysManager> hotkeysManager;
     private readonly Lazy<ITimerManager> timerManager;
     private readonly Lazy<IInputsManager> inputsManager;
+    private readonly IJoysticksPage joysticksPage;
     private NavigationView parentNavView;
     private string preNavItemTag;
 
@@ -55,7 +59,8 @@ public partial class LayoutPage : Page, IILayoutPage
         Lazy<IDeviceManager> deviceManager,
         Lazy<IHotkeysManager> hotkeysManager,
         Lazy<ITimerManager> timerManager,
-        Lazy<IInputsManager> inputsManager)
+        Lazy<IInputsManager> inputsManager,
+        IJoysticksPage joysticksPage)
     {
         this.settingsManager = settingsManager;
         this.profileManager = profileManager;
@@ -66,19 +71,56 @@ public partial class LayoutPage : Page, IILayoutPage
         this.hotkeysManager = hotkeysManager;
         this.timerManager = timerManager;
         this.inputsManager = inputsManager;
-
+        this.joysticksPage = joysticksPage;
         InitializeComponent();
     }
 
     public void Init()
     {
-        joysticksPage = new(controllerManager, timerManager);
+        //var PageLoadTimes = Stopwatch.StartNew();
+        //joysticksPage Elapsed: 2093ms
+        //joysticksPage Elapsed: 2310ms
+        //joysticksPage Elapsed: 2290ms
+        joysticksPage.Init();
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"joysticksPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //trackpadsPage Elapsed: 1828ms
         trackpadsPage = new(controllerManager, timerManager);
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"trackpadsPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //triggersPage Elapsed: 564ms
         triggersPage = new(controllerManager, timerManager);
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"triggersPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //currentTemplate Elapsed: 55ms
         currentTemplate = new();
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"currentTemplate Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //buttonsPage Elapsed: 2407ms
         buttonsPage = new(controllerManager, timerManager);
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"buttonsPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //dpadPage Elapsed: 405ms
         dpadPage = new(controllerManager, timerManager);
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"dpadPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
+        //PageLoadTimes = Stopwatch.StartNew();
+        //gyroPage Elapsed: 70ms
         gyroPage = new(hotkeysManager, controllerManager, inputsManager, timerManager);
+        //PageLoadTimes.Stop();
+        //LogManager.LogInformation($"gyroPage Elapsed: {PageLoadTimes.ElapsedMilliseconds}ms");
+
 
         // create controller related pages
         this.pages = new()
@@ -91,7 +133,7 @@ public partial class LayoutPage : Page, IILayoutPage
             { "TriggersPage", ( triggersPage, navTriggers ) },
 
             // axis
-            { "JoysticksPage", ( joysticksPage, navJoysticks ) },
+            { "JoysticksPage", ( (ILayoutPage)joysticksPage, navJoysticks ) },
             { "TrackpadsPage", ( trackpadsPage, navTrackpads ) },
 
             // gyro

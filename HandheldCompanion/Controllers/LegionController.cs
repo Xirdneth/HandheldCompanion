@@ -1,6 +1,6 @@
 ﻿using HandheldCompanion.Devices;
 using HandheldCompanion.Inputs;
-using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using HidLibrary;
 using System;

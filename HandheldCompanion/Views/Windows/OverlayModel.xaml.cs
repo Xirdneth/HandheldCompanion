@@ -1,9 +1,11 @@
 using HandheldCompanion.Controllers;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Models;
 using HandheldCompanion.Utils;
 using HandheldCompanion.Views.Classes;
+using HandheldCompanion.Views.Windows.Interfaces;
 using System;
 using System.ComponentModel;
 using System.Linq;
@@ -101,27 +103,22 @@ public partial class OverlayModel : OverlayWindow, IOverlayModel
         get => _desiredAngleDeg;
         set => _desiredAngleDeg = value;
     }
-
     public void SetDesiredAngleDegX(double value)
     {
         _desiredAngleDeg.X = value;
     }
-
     public void SetDesiredAngleDegY(double value)
     {
         _desiredAngleDeg.Y = value;
     }
-
     public void ModelViewPortSetValue(DependencyProperty dependencyProperty, EdgeMode edgeMode)
     {
         ModelViewPort.SetValue(dependencyProperty, edgeMode);
     }
-
     public void ModelViewPortSetOpacity(double value)
     {
         ModelViewPort.Opacity = value;
     }
-
     public Brush Background
     {
         get
@@ -133,7 +130,6 @@ public partial class OverlayModel : OverlayWindow, IOverlayModel
             base.Background = value;
         }
     }
-
     public bool Topmost
     {
         get
@@ -145,7 +141,6 @@ public partial class OverlayModel : OverlayWindow, IOverlayModel
             base.Topmost = value;
         }
     }
-
     public Visibility Visibility
     {
         get

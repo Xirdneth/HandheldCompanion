@@ -4,9 +4,13 @@ using HandheldCompanion.GraphicsProcessingUnit;
 using HandheldCompanion.Inputs;
 using HandheldCompanion.Managers;
 using HandheldCompanion.Managers.Desktop;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Misc;
 using HandheldCompanion.Platforms;
 using HandheldCompanion.Utils;
+using HandheldCompanion.Views.Pages;
+using HandheldCompanion.Views.QuickPages.Interfaces;
+using HandheldCompanion.Views.Windows.Interfaces;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
 using System.Collections.Generic;
@@ -23,7 +27,7 @@ namespace HandheldCompanion.Views.QuickPages;
 /// <summary>
 ///     Interaction logic for QuickProfilesPage.xaml
 /// </summary>
-public partial class QuickProfilesPage : Page
+public partial class QuickProfilesPage : Page, IQuickProfilesPage
 {
     private const int UpdateInterval = 500;
     private readonly Timer UpdateTimer;
@@ -39,6 +43,8 @@ public partial class QuickProfilesPage : Page
     private readonly Lazy<IControllerManager> controllerManager;
     private readonly Lazy<ILayoutTemplate> layoutTemplate;
     private readonly Lazy<ITimerManager> timerManager;
+    private readonly Lazy<IOverlayQuickTools> overlayQuickTools;
+    private readonly Lazy<IPerformancePage> performancePage;
     private ProcessEx currentProcess;
     private Profile selectedProfile;
 
@@ -47,47 +53,22 @@ public partial class QuickProfilesPage : Page
     private Hotkey GyroHotkey { get; set; }
     private Profile realProfile;
 
-    public QuickProfilesPage(string Tag,
-        Lazy<IProfileManager> profileManager,
-        Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IPlatformManager> platformManager,
-        Lazy<IGPUManager> gPUManager,
-        Lazy<IPerformanceManager> performanceManager, 
-        Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IHotkeysManager> hotkeysManager,
-        Lazy<IInputsManager> inputsManager,
-        Lazy<IProcessManager> processManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<ITimerManager> timerManager) : 
-        this(profileManager, 
-            powerProfileManager, 
-            platformManager, 
-            gPUManager, 
-            performanceManager, 
-            multimediaManager, 
-            hotkeysManager,
-            inputsManager,
-            processManager,
-            controllerManager,
-            timerManager)
-    {
-        this.Tag = Tag;
-    }
-
     public QuickProfilesPage(
-        Lazy<IProfileManager> profileManager,
-        Lazy<IPowerProfileManager> powerProfileManager,
-        Lazy<IPlatformManager> platformManager,
-        Lazy<IGPUManager> gPUManager,
-        Lazy<IPerformanceManager> performanceManager,
-        Lazy<IMultimediaManager> multimediaManager,
-        Lazy<IHotkeysManager> hotkeysManager,
-        Lazy<IInputsManager> inputsManager,
-        Lazy<IProcessManager> processManager,
-        Lazy<IControllerManager> controllerManager,
-        Lazy<ITimerManager> timerManager)
+       Lazy<IProfileManager> profileManager,
+       Lazy<IPowerProfileManager> powerProfileManager,
+       Lazy<IPlatformManager> platformManager,
+       Lazy<IGPUManager> gPUManager,
+       Lazy<IPerformanceManager> performanceManager,
+       Lazy<IMultimediaManager> multimediaManager,
+       Lazy<IHotkeysManager> hotkeysManager,
+       Lazy<IInputsManager> inputsManager,
+       Lazy<IProcessManager> processManager,
+       Lazy<IControllerManager> controllerManager,
+       Lazy<ITimerManager> timerManager,
+       Lazy<IOverlayQuickTools> overlayQuickTools,
+       Lazy<IPerformancePage> performancePage)
     {
-        InitializeComponent();
+
 
         this.profileManager = profileManager;
         this.powerProfileManager = powerProfileManager;
@@ -100,7 +81,21 @@ public partial class QuickProfilesPage : Page
         this.processManager = processManager;
         this.controllerManager = controllerManager;
         this.timerManager = timerManager;
+        this.overlayQuickTools = overlayQuickTools;
+        this.performancePage = performancePage;
+        UpdateTimer = new Timer(UpdateInterval);
 
+        InitializeComponent();
+
+    }
+
+    public void SetTag(string Tag)
+    {
+        this.Tag = Tag;
+    }
+
+    public void Init()
+    {
         // manage events
         processManager.Value.ForegroundChanged += ProcessManager_ForegroundChanged;
         profileManager.Value.Applied += ProfileManager_Applied;
@@ -213,15 +208,14 @@ public partial class QuickProfilesPage : Page
             cB_Input.Items.Add(comboBoxItem);
         }
 
-        UpdateTimer = new Timer(UpdateInterval);
+
         UpdateTimer.AutoReset = false;
         UpdateTimer.Elapsed += (sender, e) => SubmitProfile();
 
         // force call
         RTSS_Updated(platformManager.Value.RTSS.Status);
-        GyroHotkey = new(61,hotkeysManager,controllerManager,inputsManager);
+        GyroHotkey = new(61, hotkeysManager, controllerManager, inputsManager);
     }
-
     private void MultimediaManager_Initialized()
     {
         // UI thread (async)
@@ -450,8 +444,8 @@ public partial class QuickProfilesPage : Page
         if (radioButton.IsMouseOver)
             return;
 
-        MainWindow.overlayquickTools.performancePage.SelectionChanged(powerProfile.Guid);
-        MainWindow.overlayquickTools.NavView_Navigate("QuickPerformancePage");
+        performancePage.Value.SelectionChanged(powerProfile.Guid);
+        overlayQuickTools.Value.NavView_Navigate("QuickPerformancePage");
     }
 
     private void PowerProfile_Selected(PowerProfile powerProfile)
@@ -664,7 +658,7 @@ public partial class QuickProfilesPage : Page
             return;
 
         // create profile
-        selectedProfile = new Profile(currentProcess.Path,profileManager);
+        selectedProfile = new Profile(currentProcess.Path, profileManager);
         selectedProfile.Layout = (profileManager.Value.GetProfileWithDefaultLayout()?.Layout ?? LayoutTemplate.DefaultLayout.Layout).Clone() as Layout;
         selectedProfile.LayoutTitle = LayoutTemplate.DesktopLayout.Name;
 
@@ -736,7 +730,7 @@ public partial class QuickProfilesPage : Page
                 {
                     if (gyroActions is null || gyroActions is not MouseActions)
                     {
-                        gyroActions = new MouseActions(controllerManager,timerManager)
+                        gyroActions = new MouseActions(controllerManager, timerManager)
                         {
                             MouseType = GyroActions.DefaultMouseActionsType,
                             Sensivity = GyroActions.DefaultSensivity,
@@ -1005,11 +999,11 @@ public partial class QuickProfilesPage : Page
         // wait until lock is released
         if (updateLock)
             return;
-        
+
         // return if combobox selected item is null
         if (cb_SubProfiles.SelectedIndex == -1)
             return;
-        
+
         LogManager.LogInformation($"Subprofile changed in Quick Settings - ind: {cb_SubProfiles.SelectedIndex} - subprofile: {cb_SubProfiles.SelectedItem}");
         selectedProfile = (Profile)cb_SubProfiles.SelectedItem;
         UpdateProfile();

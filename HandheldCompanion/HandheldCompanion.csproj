@@ -2340,8 +2340,4 @@
     </Page>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Workers\" />
-  </ItemGroup>
-
 </Project>

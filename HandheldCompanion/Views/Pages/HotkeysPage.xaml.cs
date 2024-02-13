@@ -1,4 +1,5 @@
 ﻿using HandheldCompanion.Managers;
+using HandheldCompanion.Managers.Interfaces;
 using HandheldCompanion.Utils;
 using iNKORE.UI.WPF.Modern.Controls;
 using System;
@@ -11,21 +12,25 @@ namespace HandheldCompanion.Views.Pages;
 /// <summary>
 ///     Interaction logic for HotkeysPage.xaml
 /// </summary>
-public partial class HotkeysPage : Page
+public partial class HotkeysPage : Page, IHotkeysPage
 {
     private readonly Lazy<IHotkeysManager> hotkeysManager;
 
     public HotkeysPage(Lazy<IHotkeysManager> hotkeysManager)
     {
-        InitializeComponent();
         this.hotkeysManager = hotkeysManager;
-        hotkeysManager.Value.HotkeyCreated += HotkeysManager_HotkeyCreated;
-        hotkeysManager.Value.HotkeyTypeCreated += HotkeysManager_HotkeyTypeCreated;
+        InitializeComponent();
     }
 
-    public HotkeysPage(string Tag, Lazy<IHotkeysManager> hotkeysManager) : this(hotkeysManager)
+    public void SetTag(string Tag)
     {
         this.Tag = Tag;
+    }
+
+    public void Init()
+    {
+        hotkeysManager.Value.HotkeyCreated += HotkeysManager_HotkeyCreated;
+        hotkeysManager.Value.HotkeyTypeCreated += HotkeysManager_HotkeyTypeCreated;
     }
 
     private void Page_Loaded(object sender, RoutedEventArgs e)
