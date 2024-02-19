@@ -17,5 +17,7 @@ namespace HandheldCompanion.Managers.Interfaces
         Processor GetProcessor();
         void Start();
         void Stop();
+
+        double processValueFPS { get; set; }
     }
 }

@@ -114,6 +114,8 @@ public partial class MainWindow : GamepadWindow
 
     private const int WM_QUERYENDSESSION = 0x0011;
 
+
+
     public MainWindow(
         Lazy<IGPUManager> gPUManager,
         Lazy<IPowerProfileManager> powerProfileManager,
@@ -207,6 +209,7 @@ public partial class MainWindow : GamepadWindow
         CurrentAssembly = Assembly.GetExecutingAssembly();
         fileVersionInfo = FileVersionInfo.GetVersionInfo(CurrentAssembly.Location);
         CurrentWindow = this;
+        GameOverlay.TimerService.EnableHighPrecisionTimers();
 
         // used by system manager, controller manager
         uiSettings = new UISettings();
@@ -375,6 +378,8 @@ public partial class MainWindow : GamepadWindow
         navView.IsPaneOpen = settingsManager.Value.GetBoolean("MainWindowIsPaneOpen");
         MainWindowStartup.Stop();
         LogManager.LogInformation($"MainWindow Startup time Elapsed: {MainWindowStartup.ElapsedMilliseconds}ms");
+        var example = new OverlayUtil(performanceManager,processManager,toastManager);
+        new Thread(() => { example.Button_On(); }).Start();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -387,6 +392,8 @@ public partial class MainWindow : GamepadWindow
 
         return IntPtr.Zero;
     }
+
+
 
     private void ControllerManager_ControllerSelected(IController Controller)
     {

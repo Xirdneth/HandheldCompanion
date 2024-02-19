@@ -81,6 +81,7 @@ public class PerformanceManager : IPerformanceManager
     private static Processor processor;
     private double ProcessValueFPSPrevious;
     private double StoredGfxClock;
+    public double processValueFPS { get; set; }
 
     // TDP limits
     private readonly double[] StoredTDP = new double[3]; // used to store TDP
@@ -394,7 +395,7 @@ public class PerformanceManager : IPerformanceManager
             autoLock = true;
 
             // todo: Store fps for data gathering from multiple points (OSD, Performance)
-            double processValueFPS = platformManager.Value.RTSS.GetFramerate(AutoTDPProcessId);
+            processValueFPS = platformManager.Value.RTSS.GetFramerate(AutoTDPProcessId);
 
             // Ensure realistic process values, prevent divide by 0
             processValueFPS = Math.Clamp(processValueFPS, 5, 500);
