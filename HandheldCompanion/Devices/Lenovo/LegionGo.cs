@@ -209,7 +209,7 @@ public class LegionGo : IDevice
         Init();
 
         Task<bool> task = Task.Run(async () => await GetFanFullSpeedAsync());
-        bool FanFullSpeed = task.Result;
+        //bool FanFullSpeed = task.Result;
     }
 
     private void PowerProfileManager_Applied(PowerProfile profile, UpdateSource source)

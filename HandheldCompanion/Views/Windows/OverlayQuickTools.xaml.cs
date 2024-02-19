@@ -34,8 +34,11 @@ namespace HandheldCompanion.Views.Windows;
 /// <summary>
 ///     Interaction logic for QuickTools.xaml
 /// </summary>
-public partial class OverlayQuickTools : GamepadWindow
+public partial class OverlayQuickTools : GamepadWindow, INotifyPropertyChanged
 {
+    private LockObject brightnessLock = new();
+    private LockObject volumeLock = new();
+
     private const int SC_MOVE = 0xF010;
     private readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
@@ -81,6 +84,18 @@ public partial class OverlayQuickTools : GamepadWindow
     private static OverlayQuickTools CurrentWindow;
     private string preNavItemTag;
 
+    private Dictionary<string,System.Windows.Controls.Button> tabButtons = new();
+
+    private Dictionary<string, bool> _activeTabs;
+
+    public Dictionary<string, bool> activeTabs
+    {
+        get { return _activeTabs; }
+        set { _activeTabs = value;
+            
+        }
+    }
+
     public OverlayQuickTools()
     {
         InitializeComponent();
@@ -103,6 +118,11 @@ public partial class OverlayQuickTools : GamepadWindow
 
         MultimediaManager.DisplaySettingsChanged += SystemManager_DisplaySettingsChanged;
         SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        ProfileManager.Applied += ProfileManager_Applied;
+        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
+        MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
+        MultimediaManager.Initialized += SystemManager_Initialized;
 
         // create pages
         homePage = new("quickhome");
@@ -118,6 +138,27 @@ public partial class OverlayQuickTools : GamepadWindow
         _pages.Add("QuickProfilesPage", profilesPage);
         _pages.Add("QuickOverlayPage", overlayPage);
         _pages.Add("QuickSuspenderPage", suspenderPage);
+
+        activeTabs = new()
+        {
+            { "QuickHomePage", true },
+            { "QuickDevicePage", false },
+            { "QuickPerformancePage", false },
+            { "QuickProfilesPage", false },
+            { "QuickOverlayPage", false },
+            { "QuickSuspenderPage", false }
+        };
+        NotifyPropertyChanged("activeTabs");
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void NotifyPropertyChanged(string propertyName = "")
+    {
+        if (PropertyChanged != null)
+        {
+            PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public static OverlayQuickTools GetCurrent()
@@ -125,13 +166,60 @@ public partial class OverlayQuickTools : GamepadWindow
         return CurrentWindow;
     }
 
+    private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            t_CurrentProfile.Text = profile.ToString();
+        });
+    }
+
+    private void QuickButton_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (System.Windows.Controls.Button)sender;
+        if (tabButtons.ContainsKey($"{button.Name}"))
+        {
+            tabButtons[$"{button.Name}"] = button;
+            activeTabs[$"{button.Name}"] = true;
+            activeTabs.Where(x => x.Key != $"{button.Name}").ToList().ForEach(x => activeTabs[x.Key] = false);
+        }
+        else
+        {
+            tabButtons.Add($"{button.Name}", button);
+        }
+        NotifyPropertyChanged("activeTabs");
+        
+        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+    }
+
     private void SettingsManager_SettingValueChanged(string name, object value)
     {
         // UI thread (async)
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
+            string[] onScreenDisplayLevels = {
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
+            Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
+        };
+
             switch (name)
             {
+                case "OnScreenDisplayLevel":
+                    {
+                        var overlayLevel = Convert.ToInt16(value);
+
+                        // UI thread (async)
+                        Application.Current.Dispatcher.BeginInvoke(() =>
+                        {
+                            t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+                        });
+                    }
+                    break;
                 case "QuickToolsLocation":
                     {
                         var QuickToolsLocation = Convert.ToInt32(value);
@@ -151,6 +239,97 @@ public partial class OverlayQuickTools : GamepadWindow
     {
         int QuickToolsLocation = SettingsManager.GetInt("QuickToolsLocation");
         UpdateLocation(QuickToolsLocation);
+    }
+
+    private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        // wait until lock is released
+        if (brightnessLock)
+            return;
+
+        MultimediaManager.SetBrightness(SliderBrightness.Value);
+    }
+
+    private void SystemManager_BrightnessNotification(int brightness)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            using (new ScopedLock(brightnessLock))
+                SliderBrightness.Value = brightness;
+        });
+    }
+
+    private void SystemManager_VolumeNotification(float volume)
+    {
+        // UI thread
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            using (new ScopedLock(volumeLock))
+            {
+                UpdateVolumeIcon(volume);
+                SliderVolume.Value = Math.Round(volume);
+            }
+        });
+    }
+
+    private void UpdateVolumeIcon(float volume)
+    {
+        string glyph;
+
+        if (volume == 0)
+        {
+            glyph = "\uE992"; // Mute icon
+        }
+        else if (volume <= 33)
+        {
+            glyph = "\uE993"; // Low volume icon
+        }
+        else if (volume <= 65)
+        {
+            glyph = "\uE994"; // Medium volume icon
+        }
+        else
+        {
+            glyph = "\uE995"; // High volume icon (default)
+        }
+
+        VolumeIcon.Glyph = glyph;
+    }
+
+    private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        // wait until lock is released
+        if (volumeLock)
+            return;
+
+        MultimediaManager.SetVolume(SliderVolume.Value);
+    }
+
+    private void SystemManager_Initialized()
+    {
+        // UI thread (async)
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            if (MultimediaManager.HasBrightnessSupport())
+            {
+                SliderBrightness.IsEnabled = true;
+                SliderBrightness.Value = MultimediaManager.GetBrightness();
+            }
+
+            if (MultimediaManager.HasVolumeSupport())
+            {
+                SliderVolume.IsEnabled = true;
+                SliderVolume.Value = MultimediaManager.GetVolume();
+                UpdateVolumeIcon((float)SliderVolume.Value);
+            }
+        });
     }
 
     private void UpdateLocation(int QuickToolsLocation)
@@ -489,7 +668,7 @@ public partial class OverlayQuickTools : GamepadWindow
     private void On_Navigated(object sender, NavigationEventArgs e)
     {
         navView.IsBackEnabled = ContentFrame.CanGoBack;
-        navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
+        //navHeader.Text = ((Page)((ContentControl)sender).Content).Title;
     }
 
     private void UpdateTime(object? sender, EventArgs e)

@@ -13,8 +13,8 @@ namespace HandheldCompanion.Views.QuickPages;
 /// </summary>
 public partial class QuickHomePage : Page
 {
-    private LockObject brightnessLock = new();
-    private LockObject volumeLock = new();
+    //private LockObject brightnessLock = new();
+    //private LockObject volumeLock = new();
 
     public QuickHomePage(string Tag) : this()
     {
@@ -23,12 +23,12 @@ public partial class QuickHomePage : Page
         HotkeysManager.HotkeyCreated += HotkeysManager_HotkeyCreated;
         HotkeysManager.HotkeyUpdated += HotkeysManager_HotkeyUpdated;
 
-        MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
-        MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
-        MultimediaManager.Initialized += SystemManager_Initialized;
+        //MultimediaManager.VolumeNotification += SystemManager_VolumeNotification;
+        //MultimediaManager.BrightnessNotification += SystemManager_BrightnessNotification;
+        //MultimediaManager.Initialized += SystemManager_Initialized;
 
-        ProfileManager.Applied += ProfileManager_Applied;
-        SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
+        //ProfileManager.Applied += ProfileManager_Applied;
+        //SettingsManager.SettingValueChanged += SettingsManager_SettingValueChanged;
     }
 
     public QuickHomePage()
@@ -55,136 +55,136 @@ public partial class QuickHomePage : Page
             QuickHotkeys.Children.Add(hotkey.GetPin());
     }
 
-    private void QuickButton_Click(object sender, RoutedEventArgs e)
-    {
-        Button button = (Button)sender;
-        MainWindow.overlayquickTools.NavView_Navigate(button.Name);
-    }
+    //private void QuickButton_Click(object sender, RoutedEventArgs e)
+    //{
+    //    Button button = (Button)sender;
+    //    MainWindow.overlayquickTools.NavView_Navigate(button.Name);
+    //}
 
-    private void SystemManager_Initialized()
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            if (MultimediaManager.HasBrightnessSupport())
-            {
-                SliderBrightness.IsEnabled = true;
-                SliderBrightness.Value = MultimediaManager.GetBrightness();
-            }
+    //private void SystemManager_Initialized()
+    //{
+    //    // UI thread (async)
+    //    Application.Current.Dispatcher.BeginInvoke(() =>
+    //    {
+    //        if (MultimediaManager.HasBrightnessSupport())
+    //        {
+    //            SliderBrightness.IsEnabled = true;
+    //            SliderBrightness.Value = MultimediaManager.GetBrightness();
+    //        }
 
-            if (MultimediaManager.HasVolumeSupport())
-            {
-                SliderVolume.IsEnabled = true;
-                SliderVolume.Value = MultimediaManager.GetVolume();
-                UpdateVolumeIcon((float)SliderVolume.Value);
-            }
-        });
-    }
+    //        if (MultimediaManager.HasVolumeSupport())
+    //        {
+    //            SliderVolume.IsEnabled = true;
+    //            SliderVolume.Value = MultimediaManager.GetVolume();
+    //            UpdateVolumeIcon((float)SliderVolume.Value);
+    //        }
+    //    });
+    //}
 
-    private void SystemManager_BrightnessNotification(int brightness)
-    {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            using (new ScopedLock(brightnessLock))
-                SliderBrightness.Value = brightness;
-        });
-    }
+    //private void SystemManager_BrightnessNotification(int brightness)
+    //{
+    //    // UI thread
+    //    Application.Current.Dispatcher.Invoke(() =>
+    //    {
+    //        using (new ScopedLock(brightnessLock))
+    //            SliderBrightness.Value = brightness;
+    //    });
+    //}
 
-    private void SystemManager_VolumeNotification(float volume)
-    {
-        // UI thread
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            using (new ScopedLock(volumeLock))
-            {
-                UpdateVolumeIcon(volume);
-                SliderVolume.Value = Math.Round(volume);
-            }
-        });
-    }
+    //private void SystemManager_VolumeNotification(float volume)
+    //{
+    //    // UI thread
+    //    Application.Current.Dispatcher.Invoke(() =>
+    //    {
+    //        using (new ScopedLock(volumeLock))
+    //        {
+    //            UpdateVolumeIcon(volume);
+    //            SliderVolume.Value = Math.Round(volume);
+    //        }
+    //    });
+    //}
 
-    private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-            return;
+    //private void SliderBrightness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    //{
+    //    if (!IsLoaded)
+    //        return;
 
-        // wait until lock is released
-        if (brightnessLock)
-            return;
+    //    // wait until lock is released
+    //    if (brightnessLock)
+    //        return;
 
-       MultimediaManager.SetBrightness(SliderBrightness.Value);
-    }
+    //   MultimediaManager.SetBrightness(SliderBrightness.Value);
+    //}
 
-    private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-            return;
+    //private void SliderVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    //{
+    //    if (!IsLoaded)
+    //        return;
 
-        // wait until lock is released
-        if (volumeLock)
-            return;
+    //    // wait until lock is released
+    //    if (volumeLock)
+    //        return;
 
-        MultimediaManager.SetVolume(SliderVolume.Value);
-    }
+    //    MultimediaManager.SetVolume(SliderVolume.Value);
+    //}
 
-    private void ProfileManager_Applied(Profile profile, UpdateSource source)
-    {
-        // UI thread (async)
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            t_CurrentProfile.Text = profile.ToString();
-        });
-    }
+    //private void ProfileManager_Applied(Profile profile, UpdateSource source)
+    //{
+    //    // UI thread (async)
+    //    Application.Current.Dispatcher.BeginInvoke(() =>
+    //    {
+    //        t_CurrentProfile.Text = profile.ToString();
+    //    });
+    //}
 
-    private void SettingsManager_SettingValueChanged(string name, object value)
-    {
-        string[] onScreenDisplayLevels = {
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
-            Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
-        };
+    //private void SettingsManager_SettingValueChanged(string name, object value)
+    //{
+    //    string[] onScreenDisplayLevels = {
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_Disabled,
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_Minimal,
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_Extended,
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_Full,
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_Custom,
+    //        Properties.Resources.OverlayPage_OverlayDisplayLevel_External,
+    //    };
 
-        switch (name)
-        {
-            case "OnScreenDisplayLevel":
-                {
-                    var overlayLevel = Convert.ToInt16(value);
+    //    switch (name)
+    //    {
+    //        case "OnScreenDisplayLevel":
+    //            {
+    //                var overlayLevel = Convert.ToInt16(value);
 
-                    // UI thread (async)
-                    Application.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
-                    });
-                }
-                break;
-        }
-    }
+    //                // UI thread (async)
+    //                Application.Current.Dispatcher.BeginInvoke(() =>
+    //                {
+    //                    t_CurrentOverlayLevel.Text = onScreenDisplayLevels[overlayLevel];
+    //                });
+    //            }
+    //            break;
+    //    }
+    //}
 
-    private void UpdateVolumeIcon(float volume)
-    {
-        string glyph;
+    //private void UpdateVolumeIcon(float volume)
+    //{
+    //    string glyph;
 
-        if (volume == 0)
-        {
-            glyph = "\uE992"; // Mute icon
-        }
-        else if (volume <= 33)
-        {
-            glyph = "\uE993"; // Low volume icon
-        }
-        else if (volume <= 65)
-        {
-            glyph = "\uE994"; // Medium volume icon
-        }
-        else
-        {
-            glyph = "\uE995"; // High volume icon (default)
-        }
+    //    if (volume == 0)
+    //    {
+    //        glyph = "\uE992"; // Mute icon
+    //    }
+    //    else if (volume <= 33)
+    //    {
+    //        glyph = "\uE993"; // Low volume icon
+    //    }
+    //    else if (volume <= 65)
+    //    {
+    //        glyph = "\uE994"; // Medium volume icon
+    //    }
+    //    else
+    //    {
+    //        glyph = "\uE995"; // High volume icon (default)
+    //    }
 
-        VolumeIcon.Glyph = glyph;
-    }
+    //    VolumeIcon.Glyph = glyph;
+    //}
 }
