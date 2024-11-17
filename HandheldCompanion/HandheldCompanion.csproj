@@ -242,7 +242,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\steam-hidapi.net\steam-hidapi.net.csproj" />
-    <ProjectReference Include="..\Watchdog.ClientLib\Watchdog.ClientLib.csproj" />
+    <ProjectReference Include="..\Watchdog.Lib\Watchdog.Lib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

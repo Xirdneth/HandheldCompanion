@@ -21,22 +21,22 @@ namespace HandheldCompanion.Watchdog
 
             //Deploy / Install Service
             //================================================
-                //Applications.Add("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
+            //Applications.Add("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
 
-                //ServiceBase[] ServicesToRun;
-                //ServicesToRun = new ServiceBase[]
-                //{
-                //    new Service1(Applications)
-                //};
-                //ServiceBase.Run(ServicesToRun);
+            //ServiceBase[] ServicesToRun;
+            //ServicesToRun = new ServiceBase[]
+            //{
+            //    new Service1(Applications)
+            //};
+            //ServiceBase.Run(ServicesToRun);
 
             // Local testing
             //=============================================
-                //AppWatcher appWatcher = new AppWatcher();
-                //appWatcher.Listen("----Name Of Application----",@"----Path To EXE to watch----");
-                //appWatcher.Listen("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
+            AppWatcher appWatcher = new AppWatcher();
+            //appWatcher.Listen("----Name Of Application----", @"----Path To EXE to watch----");
+            appWatcher.Listen("HandheldCompanion", @"D:\Game Projects\HandheldCompanion\bin\Debug\net8.0-windows10.0.19041.0\HandheldCompanion.exe");
 
-                //Task.Delay(-1).GetAwaiter().GetResult();
+            Task.Delay(-1).GetAwaiter().GetResult();
         }
     }
 }

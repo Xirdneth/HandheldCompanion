@@ -1,11 +1,6 @@
 ﻿using NLog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Watchdog.ServerLib;
-using Watchdog.Utilities;
+using Watchdog.Lib.Server;
+using Watchdog.Lib.Utils;
 
 namespace HandheldCompanion.Watchdog
 {
@@ -22,7 +17,7 @@ namespace HandheldCompanion.Watchdog
             _configuration = new Configuration();
             _configurationSerializer = new ConfigurationSerializer<Configuration>("configuration.json", _configuration);
             _configuration = _configurationSerializer.Deserialize();
-            applicationWatcher = new ApplicationWatcher(_logger);
+            applicationWatcher = new ApplicationWatcher();
         }
 
         public void Listen(string applicationName, string applicationPath)

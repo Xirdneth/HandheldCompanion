@@ -68,13 +68,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Watchdog.ServerLib\Watchdog.ServerLib.csproj">
-      <Project>{4bc93e50-963a-4471-922f-801810b9efc2}</Project>
-      <Name>Watchdog.ServerLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Watchdog.Utilities\Watchdog.Utilities.csproj">
-      <Project>{b306adda-8617-4746-aba2-c36dea9b6145}</Project>
-      <Name>Watchdog.Utilities</Name>
+    <ProjectReference Include="..\Watchdog.Lib\Watchdog.Lib.csproj">
+      <Project>{5b6a6f93-d351-49b5-adaa-16657015251a}</Project>
+      <Name>Watchdog.Lib</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

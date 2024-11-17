@@ -11,7 +11,7 @@ using System.Threading;
 using System.Timers;
 using System.Windows;
 using System.Windows.Threading;
-using Watchdog.ClientLib;
+using Watchdog.Lib.Client;
 using static HandheldCompanion.WinAPI;
 
 namespace HandheldCompanion;

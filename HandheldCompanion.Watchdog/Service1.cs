@@ -8,8 +8,8 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
-using Watchdog.ServerLib;
-using Watchdog.Utilities;
+using Watchdog.Lib.Server;
+using Watchdog.Lib.Utils;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace HandheldCompanion.Watchdog
@@ -30,7 +30,7 @@ namespace HandheldCompanion.Watchdog
             _configuration = new Configuration();
             _configurationSerializer = new ConfigurationSerializer<Configuration>("configuration.json", _configuration);
             _configuration = _configurationSerializer.Deserialize();
-            applicationWatcher = new ApplicationWatcher(_logger);
+            applicationWatcher = new ApplicationWatcher();
 
         }
 
