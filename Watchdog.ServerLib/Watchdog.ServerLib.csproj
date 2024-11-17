@@ -68,7 +68,7 @@
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Utilities\Watchdog.Utilities.csproj">
+    <ProjectReference Include="..\Watchdog.Utilities\Watchdog.Utilities.csproj">
       <Project>{b306adda-8617-4746-aba2-c36dea9b6145}</Project>
       <Name>Watchdog.Utilities</Name>
     </ProjectReference>

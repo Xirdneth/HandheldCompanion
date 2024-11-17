@@ -17,22 +17,26 @@ namespace HandheldCompanion.Watchdog
         private static Dictionary<string, string> Applications = new Dictionary<string, string>();
         static void Main()
         {
-            //Applications.Add("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
+            //Uncomment below depending on what you want to do
 
-            //ServiceBase[] ServicesToRun;
-            //ServicesToRun = new ServiceBase[]
-            //{
-            //    new Service1(Applications)
-            //};
-            //ServiceBase.Run(ServicesToRun);
+            //Deploy / Install Service
+            //================================================
+                //Applications.Add("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
 
-            // Below is just for testing 
+                //ServiceBase[] ServicesToRun;
+                //ServicesToRun = new ServiceBase[]
+                //{
+                //    new Service1(Applications)
+                //};
+                //ServiceBase.Run(ServicesToRun);
+
+            // Local testing
             //=============================================
-            //AppWatcher appWatcher = new AppWatcher();
-            //appWatcher.Listen("----Name Of Application----",@"----Path To EXE to watch----");
-            //appWatcher.Listen("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
+                //AppWatcher appWatcher = new AppWatcher();
+                //appWatcher.Listen("----Name Of Application----",@"----Path To EXE to watch----");
+                //appWatcher.Listen("HandheldCompanion", @"C:\Program Files\HandheldCompanion\HandheldCompanion.exe");
 
-            //Task.Delay(-1).GetAwaiter().GetResult();
+                //Task.Delay(-1).GetAwaiter().GetResult();
         }
     }
 }
