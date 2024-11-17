@@ -3,12 +3,15 @@ using HandheldCompanion.Utils;
 using HandheldCompanion.Views;
 using Sentry;
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Threading;
+using System.Timers;
 using System.Windows;
 using System.Windows.Threading;
+using Watchdog.ClientLib;
 using static HandheldCompanion.WinAPI;
 
 namespace HandheldCompanion;
@@ -27,6 +30,7 @@ public partial class App : Application
     public App()
     {
         InitializeSentry();
+        InitializeHeartbeat();
         InitializeComponent();
     }
 
@@ -126,6 +130,9 @@ public partial class App : Application
         // Handler for exceptions in dispatcher.
         DispatcherUnhandledException += App_DispatcherUnhandledException;
 
+        //On startup check if it needs to tell the watchdog to auto restart or not. 
+        _heartbeat.ToggleMonitorApplication(bool.Parse(SettingsManager.GetString("AutoRestart")));
+
         MainWindow = new MainWindow(fileVersionInfo, CurrentAssembly);
         MainWindow.Show();
     }
@@ -205,5 +212,43 @@ public partial class App : Application
                 options.IsGlobalModeEnabled = true;
             });
         }
+    }
+
+    private System.Timers.Timer _timer;
+    private Heartbeat _heartbeat = new Heartbeat();
+    private int _heartbeatCount;
+    private void InitializeHeartbeat()
+    {
+         // initialize heartbeat
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += OnTimedEvent;
+        _timer.Enabled = true;
+
+        #region WatchdogWatcher initialization
+
+        int watchDogMonitorInterval = 5000;
+
+        try
+        {
+            watchDogMonitorInterval = Convert.ToInt32(ConfigurationManager.AppSettings["WatchDogMonitorInterval"]);
+            if (watchDogMonitorInterval != 0)
+            {
+                watchDogMonitorInterval = 5000;
+            }
+        }
+        catch (Exception ex)
+        {
+            watchDogMonitorInterval = 5000;
+            LogManager.LogError("Exception WatchdogMonitor : " + ex.StackTrace);
+        }
+
+
+        #endregion
+    }
+    private void OnTimedEvent(object? sender, ElapsedEventArgs e)
+    {
+        // Invoke heartbeat on the main thread otherwise it will send even if the main thread is unresponsive?
+        _heartbeat?.SendHeartbeat();
+        //LogManager.LogDebug("Heartbeat " + _heartbeatCount);
     }
 }
